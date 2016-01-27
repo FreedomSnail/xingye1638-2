@@ -849,16 +849,26 @@ void handle_transparent_transmission(u8 *buf)
 	float lon;
 	toFloat tt;
 	OS_ERR err;
+	u8 msg = MSG_TYPE_NAV_START;
     if(buf[0] == 0x06)//地面站控制命令,执行前先获取控制权
     {
         if(buf[1] == 0x00)//开始航线飞行
         {
             //DJI_Sample_Funny_Ctrl(DRAW_SQUARE_SAMPLE);
-            OSSemPost(&SemDjiFlightCtrlObtain,OS_OPT_POST_1,&err);
+            //OSSemPost(&SemDjiFlightCtrlObtain,OS_OPT_POST_1,&err);
+            
+			#if 1
+			OSQPost((OS_Q*		)&QAutoNav, 	
+					(void*		)&msg,
+					(OS_MSG_SIZE)1,
+					(OS_OPT 	)OS_OPT_POST_FIFO,
+					(OS_ERR*	)&err);
+			//printf("\r\npost q!\r\n",index,lat,lon);
+			#endif
         }
         else if(buf[1] == 0x01)//停止航线飞行
         {
-			OSSemPost(&SemDjiFlightCtrlRelease,OS_OPT_POST_1,&err);
+			//OSSemPost(&SemDjiFlightCtrlRelease,OS_OPT_POST_1,&err);
         }
         else if(buf[1] == 0x02)//获取设备信息
         {

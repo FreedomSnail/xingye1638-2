@@ -312,15 +312,16 @@ typedef void (*Command_Result_Notify)(unsigned short result);
 
 
 
-#define MSG_TYPE_RC_CTRL	1
-#define MSG_TYPE_NAV_DONE	2
+#define MSG_TYPE_RC_CTRL		1
+#define MSG_TYPE_NAV_START		2
+#define MSG_TYPE_NAV_OBTAIN_CTL	3
+#define MSG_TYPE_NAV_DONE		4
 
 
 extern OS_SEM SemDjiCodec;
 extern OS_SEM SemDjiActivation;
 extern OS_SEM SemDjiFlightCtrlObtain;
 extern OS_SEM SemDjiFlightCtrlRelease;
-extern OS_SEM SemAutoNav;
 extern OS_Q   QAutoNav;
 
 
