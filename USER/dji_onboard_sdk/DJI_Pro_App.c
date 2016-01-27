@@ -868,6 +868,7 @@ void handle_transparent_transmission(u8 *buf)
         }
         else if(buf[1] == 0x01)//停止航线飞行
         {
+        	//printf("\r\nstopppppppppp!\r\n",index,lat,lon);
 			//OSSemPost(&SemDjiFlightCtrlRelease,OS_OPT_POST_1,&err);
         }
         else if(buf[1] == 0x02)//获取设备信息

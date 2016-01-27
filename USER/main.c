@@ -311,7 +311,7 @@ void AppTaskDjiActivation(void *p_arg)
 		OSTimeDlyHMSM(0, 0, 1, 0, OS_OPT_TIME_HMSM_STRICT,&err);
 		send_flight_data((float)std_broadcast_data.pos.lati,(float)std_broadcast_data.pos.longti,(float)std_broadcast_data.pos.alti, (float)std_broadcast_data.pos.height,0, core_state.target_waypoint, 0,1,1,1,0);
 		#if 1
-		//LOG_DJI_VALUE("\r\nctrl_info=%d\r\n", std_broadcast_data.ctrl_info.cur_ctrl_dev_in_navi_mode);
+		LOG_DJI_VALUE("\r\sss=%d\r\n",std_broadcast_data.ctrl_info.cur_ctrl_dev_in_navi_mode);
 		if((std_broadcast_data.ctrl_info.cur_ctrl_dev_in_navi_mode == 1)) {//app control
 			if(nav_flag<2) {
 				nav_flag++;
@@ -391,7 +391,8 @@ void AppTaskDjiReleaseCtrl(void *p_arg)
 #define	AUTO_NAV_STATUS_IDLE 0
 #define	AUTO_NAV_STATUS_CHECK_GPS 1
 #define	AUTO_NAV_STATUS_CHECK_HEIGHT 2
-#define	AUTO_NAV_STATUS_RUN 3
+#define AUTO_NAV_STATUS_RAISE_TARTGET_HEIGHT 3
+#define	AUTO_NAV_STATUS_RUN 4
 
 void AppTaskAutoNav(void *p_arg)
 {
@@ -443,18 +444,26 @@ void AppTaskAutoNav(void *p_arg)
 			case AUTO_NAV_STATUS_CHECK_GPS:
 				if(auto_nav_check_gps()) {
 					status = AUTO_NAV_STATUS_CHECK_HEIGHT;
-					LOG_DJI_STR("\r\ncheck gps done!\r\n");
+					LOG_DJI_STR("\r\ngps ok!\r\n");
 					auto_nav_math_init();
 					LOG_DJI_STR("\r\nnav init!\r\n");
-					
+				} else {
+					LOG_DJI_STR("\r\npchecking gps!\r\n");
 				}
 				break;
 			case AUTO_NAV_STATUS_CHECK_HEIGHT:
 				if(auto_nav_check_height()) {
-				
+					status = AUTO_NAV_STATUS_RAISE_TARTGET_HEIGHT;
 				} else {
 					status = AUTO_NAV_STATUS_RUN;
-					LOG_DJI_STR("\r\ncheck height\r\n");
+					LOG_DJI_STR("\r\nheight already >=2m\r\n");
+					LOG_DJI_STR("\r\nstart target waypoint!\r\n");
+				}
+				break;
+			case AUTO_NAV_STATUS_RAISE_TARTGET_HEIGHT:
+				if(auto_nav_raise_to_tartget_height()) {
+					status = AUTO_NAV_STATUS_RUN;
+					LOG_DJI_STR("\r\nflight raise to tartget height\r\n");
 					LOG_DJI_STR("\r\nstart target waypoint!\r\n");
 				}
 				break;
