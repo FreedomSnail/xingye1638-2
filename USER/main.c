@@ -400,6 +400,7 @@ void AppTaskAutoNav(void *p_arg)
 	u8 *msg;
 	OS_MSG_SIZE size;
 	u8 status=AUTO_NAV_STATUS_IDLE;
+	u8 cnt = 0;
 	CPU_SR_ALLOC();
 	p_arg = p_arg;	
 	
@@ -422,7 +423,16 @@ void AppTaskAutoNav(void *p_arg)
 						LOG_DJI_STR("\r\nNav start!\r\n");
 						OSSemPost(&SemDjiFlightCtrlObtain,OS_OPT_POST_1,&err);
 					} else {
-						LOG_DJI_STR("\r\nNav already start!\r\n");
+						cnt++;
+						if(cnt<3) {
+							LOG_DJI_STR("\r\nNav already start!\r\n");
+						} else {
+							cnt = 0;
+							status = AUTO_NAV_STATUS_IDLE;
+							LOG_DJI_STR("\r\nNav restart!\r\n");
+							OSSemPost(&SemDjiFlightCtrlObtain,OS_OPT_POST_1,&err);
+						}
+						
 					}
 					break;
 				case MSG_TYPE_NAV_OBTAIN_CTL:
