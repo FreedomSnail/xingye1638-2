@@ -25,5 +25,7 @@ u8 auto_nav_check_height(void);
 
 u8 auto_nav_height_init(void);
 
+u8 auto_nav(void);
+
 
 #endif

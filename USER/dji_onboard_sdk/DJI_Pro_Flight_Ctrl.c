@@ -142,7 +142,7 @@ u8 auto_nav_height_init(void)
 	}  
 }
 
-void auto_nav(void)
+u8 auto_nav(void)
 {
 	api_pos_data_t pos;
 	struct EnuCoor enu_speed;
@@ -154,7 +154,8 @@ void auto_nav(void)
 	float speed_n;
 	float speed_e;
 	float speed_temp;
-	OS_ERR err;
+	//u8 msg;
+	//OS_ERR err;
 	
 	//设置ENU速度
 
@@ -225,11 +226,17 @@ void auto_nav(void)
 	    ctrl_attitude_alt(speed_e, speed_n, yaw*180/M_PI, task_altitude);
 	} else {
 	    //释放控制权
-	    //DJI_Pro_Control_Management(0,NULL);
-	    /////////////break;
-	    OSSemPost(&SemAutoNav,OS_OPT_POST_1,&err);
+	    #if 0
+	    msg = MSG_TYPE_NAV_DONE;
+	    OSQPost((OS_Q*		)&QAutoNav,		
+						(void*		)&msg,
+						(OS_MSG_SIZE)1,
+						(OS_OPT 	)OS_OPT_POST_FIFO,
+						(OS_ERR*	)&err);
+						#endif
+		return 1;
 	}
-    
+    return 0;
 }
 #if 0
 void auto_nav(void)

@@ -310,12 +310,18 @@ typedef struct ProFrameData_Unit
 
 typedef void (*Command_Result_Notify)(unsigned short result);
 
-extern OS_SEM SemDjiCodec;
 
+
+#define MSG_TYPE_RC_CTRL	1
+#define MSG_TYPE_NAV_DONE	2
+
+
+extern OS_SEM SemDjiCodec;
 extern OS_SEM SemDjiActivation;
 extern OS_SEM SemDjiFlightCtrlObtain;
 extern OS_SEM SemDjiFlightCtrlRelease;
 extern OS_SEM SemAutoNav;
+extern OS_Q   QAutoNav;
 
 
 

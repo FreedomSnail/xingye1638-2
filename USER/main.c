@@ -100,6 +100,12 @@ OS_TCB	TaskAutoNavTCB;
 //任务堆栈
 CPU_STK	TASK_AUTO_NAV_STK[TASK_AUTO_NAV_STK_SIZE];
 //__align(8) CPU_STK	TASK_AUTO_NAV_STK[TASK_AUTO_NAV_STK_SIZE];
+
+
+
+
+
+
 //任务函数
 void AppTaskAutoNav(void *p_arg);
 
@@ -153,7 +159,7 @@ OS_SEM SemAutoNav;
 
 u8 flag_frame=0;
 
-OS_Q   QAutoFlight;
+OS_Q   QAutoNav;
 void start_task(void *p_arg)
 {
 	OS_ERR err;
@@ -176,7 +182,7 @@ void start_task(void *p_arg)
 	
 	OS_CRITICAL_ENTER();	//进入临界区
 	
-	OSQCreate(&QAutoFlight, "qmsg", 10, &err);
+	OSQCreate(&QAutoNav, "qmsg", 10, &err);
 
 	OSSemCreate ((OS_SEM*	)&SemDjiActivation,
                  (CPU_CHAR*	)"1",
@@ -290,7 +296,7 @@ void AppTaskDjiSDKCodec(void *p_arg)
 			//LOG_DJI_STR(".");
 			Pro_Receive_Interface();
 			#if 0
-			OSQPost((OS_Q*		)&QAutoFlight,		
+			OSQPost((OS_Q*		)&QAutoNav,		
 						(void*		)&msg,
 						(OS_MSG_SIZE)1,
 						(OS_OPT 	)OS_OPT_POST_FIFO,
@@ -312,7 +318,7 @@ void AppTaskDjiSDKCodec(void *p_arg)
 void AppTaskDjiActivation(void *p_arg)
 {
 	OS_ERR err;
-	u8 msg;
+	u8 msg = MSG_TYPE_RC_CTRL;
 	u8 nav_flag=0;
 	
 	CPU_SR_ALLOC();
@@ -328,11 +334,18 @@ void AppTaskDjiActivation(void *p_arg)
 		}
 	}
 	while(1) {
-		OSTimeDlyHMSM(0, 0, 0, 500, OS_OPT_TIME_HMSM_NON_STRICT,&err);
+		OSTimeDlyHMSM(0, 0, 2, 0, OS_OPT_TIME_HMSM_STRICT,&err);
 		send_flight_data((float)std_broadcast_data.pos.lati,(float)std_broadcast_data.pos.longti,(float)std_broadcast_data.pos.alti, (float)std_broadcast_data.pos.height,0, core_state.target_waypoint, 0,1,1,1,0);
-		
+		#if 0
+		msg++;
+		OSQPost((OS_Q*		)&QAutoNav,		
+				(void*		)&msg,
+				(OS_MSG_SIZE)1,
+				(OS_OPT 	)OS_OPT_POST_FIFO,
+				(OS_ERR*	)&err);
+		#endif
 #if 1
-		LOG_DJI_VALUE("\r\nctrl_info=%d\r\n", std_broadcast_data.ctrl_info.cur_ctrl_dev_in_navi_mode);
+		//LOG_DJI_VALUE("\r\nctrl_info=%d\r\n", std_broadcast_data.ctrl_info.cur_ctrl_dev_in_navi_mode);
 		if((std_broadcast_data.ctrl_info.cur_ctrl_dev_in_navi_mode == 1)) {//app control
 			if(nav_flag<2) {
 				nav_flag++;
@@ -341,10 +354,9 @@ void AppTaskDjiActivation(void *p_arg)
 		} else {	//rc control
 			if(nav_flag>1) {
 				nav_flag = 0;
-				OSSemPost(&SemAutoNav,OS_OPT_POST_1,&err);
 				
-				#if 0
-				OSQPost((OS_Q*		)&QAutoFlight,		
+				#if 1
+				OSQPost((OS_Q*		)&QAutoNav,		
 						(void*		)&msg,
 						(OS_MSG_SIZE)1,
 						(OS_OPT 	)OS_OPT_POST_FIFO,
@@ -377,7 +389,7 @@ void AppTaskDjiObtainCtrl(void *p_arg)
 				LOG_DJI_STR("\r\nObtain Success!\r\n");
 				OSSemPost(&SemAutoNav,OS_OPT_POST_1,&err);
 				#if 0
-				OSQPost((OS_Q*		)&QAutoFlight,		
+				OSQPost((OS_Q*		)&QAutoNav,		
 						(void*		)&msg,
 						(OS_MSG_SIZE)1,
 						(OS_OPT 	)OS_OPT_POST_FIFO,
@@ -420,8 +432,10 @@ void AppTaskAutoNav(void *p_arg)
 {
 	OS_ERR err;
 	u8 *msg;
+	OS_MSG_SIZE size;
 	CPU_SR_ALLOC();
 	p_arg = p_arg;	
+	
 	while(1) {
 		OSSemPend(&SemAutoNav, 0, OS_OPT_PEND_BLOCKING,0,&err); 
 		#if 1
@@ -443,29 +457,32 @@ void AppTaskAutoNav(void *p_arg)
 				if(auto_nav_height_init()) {
 					break;
 				}
-				
 			}
 		}
 		LOG_DJI_STR("\r\nstart target waypoint!\r\n");
 		while(1) {
-			OSSemPend(&SemAutoNav, 10, OS_OPT_PEND_BLOCKING,0,&err); 
-			if(OS_ERR_NONE == err) {
-				LOG_DJI_STR("\r\ntarget complete or rc control,release ctrl!\r\n");
+			msg=OSQPend((OS_Q*			)&QAutoNav,   
+					(OS_TICK		)10,
+                    (OS_OPT			)OS_OPT_PEND_BLOCKING,
+                    (OS_MSG_SIZE*	)&size,		
+                    (CPU_TS*		)0,
+                    (OS_ERR*		)&err);
+            if(auto_nav()) {
+            	LOG_DJI_STR("\r\ntarget complete,release ctrl!\r\n");
 				OSSemPost(&SemDjiFlightCtrlRelease,OS_OPT_POST_1,&err);
 				break;
-			}
-			auto_nav();
+            }
 			LOG_DJI_STR(".");
-#if 0
-			if(std_broadcast_data.ctrl_info.cur_ctrl_dev_in_navi_mode != 1) {//rc control
-				nav_flag = 0;
-				LOG_DJI_STR("\r\nrc control,release ctrl!\r\n");
-				//OSSemPost(&SemDjiFlightCtrlRelease,OS_OPT_POST_1,&err);
-				break;
-			}
-#endif
-			
-			
+			if(OS_ERR_NONE == err) {
+				if(*msg == MSG_TYPE_RC_CTRL) {
+					LOG_DJI_STR("\r\nrc control,lose serial ctrl!\r\n");
+					break;
+				} else if(*msg == MSG_TYPE_NAV_DONE) {
+					LOG_DJI_STR("\r\ntarget complete,release ctrl!\r\n");
+					OSSemPost(&SemDjiFlightCtrlRelease,OS_OPT_POST_1,&err);
+					break;
+				}
+            }
 		}
 	}
 }
