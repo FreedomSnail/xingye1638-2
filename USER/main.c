@@ -311,7 +311,7 @@ void AppTaskDjiActivation(void *p_arg)
 		OSTimeDlyHMSM(0, 0, 1, 0, OS_OPT_TIME_HMSM_STRICT,&err);
 		send_flight_data((float)std_broadcast_data.pos.lati,(float)std_broadcast_data.pos.longti,(float)std_broadcast_data.pos.alti, (float)std_broadcast_data.pos.height,0, core_state.target_waypoint, 0,1,1,1,0);
 		#if 1
-		LOG_DJI_VALUE("\r\sss=%d\r\n",std_broadcast_data.ctrl_info.cur_ctrl_dev_in_navi_mode);
+		//LOG_DJI_VALUE("\r\sss=%d\r\n",std_broadcast_data.ctrl_info.cur_ctrl_dev_in_navi_mode);
 		if((std_broadcast_data.ctrl_info.cur_ctrl_dev_in_navi_mode == 1)) {//app control
 			if(nav_flag<2) {
 				nav_flag++;
