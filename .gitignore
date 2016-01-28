@@ -29,7 +29,7 @@ JLinkLog.txt
 *.pch
 
 # Libraries
-#*.lib
+
 *.a
 *.la
 *.lo
