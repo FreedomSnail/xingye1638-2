@@ -49,7 +49,7 @@ float task_area = 0;            ///<航线面积
 float task_distance = 0;        ///<航线总距离
 
 
-uint32_t device_id = 1509280000097;///<出厂编号
+uint32_t device_id = 150920097;///<出厂编号
 uint8_t is_usable = TRUE;///<是否可用
 
 u16 array_to_short(u8 *array)
@@ -474,7 +474,7 @@ void Pro_Receive_Interface(void)
   	int Heard_CRC32=0;
 	ProFrameData_Unit  RecData;
 	SDKHeader RecHeader ;
-	ProAckParameter Ack;
+//	ProAckParameter Ack;
 	OS_ERR err;
 	memcpy(&RecHeader, serial_sdk.comm_recv_buf,sizeof(SDKHeader));
 	
@@ -915,12 +915,12 @@ void handle_transparent_transmission(u8 *buf)
 
                 if(index == 0)
                 {
-                    core_state.lla_origin.lat = lat/180.0*M_PI;
-                    core_state.lla_origin.lon = lon/180.0*M_PI;
+                    core_state.lla_origin.lat = (double)lat/180.0*M_PI;
+                    core_state.lla_origin.lon = (double)lon/180.0*M_PI;
                     core_state.lla_origin.alt = task_altitude;
                 }
 
-                ap_set_waypoint(index,lat/180.0*M_PI,lon/180.0*M_PI,task_altitude);
+                ap_set_waypoint(index,(double)lat/180.0*M_PI,(double)lon/180.0*M_PI,task_altitude);
 
                 //printf("waypoint from mobile:%d,%f,%f\n",index,lat,lon);
                 //printf("waypoint from mobile enu:%f,%f,%f\n",ap_get_waypoint(index).x,ap_get_waypoint(index).y,ap_get_waypoint(index).z);
@@ -942,8 +942,7 @@ void handle_transparent_transmission(u8 *buf)
                 end_waypoint_transfer();
                 end_waypoint_transfer();
                 end_waypoint_transfer();
-                //printf("waypoint finished\r\n");
-                printf("\r\nupload done!\r\n",index,lat,lon);
+                printf("\r\nupload done!\r\n");
             }
         }
         else if(buf[1] == 0x02)//地面站请求获取航点数据包
@@ -989,7 +988,7 @@ void handle_transparent_transmission(u8 *buf)
             cmd[21] = tt.bytePtr[3];
 
             send_data_to_mobile(cmd,22);
-            printf("\r\ndownload done!\r\n",index,lat,lon);
+            printf("\r\ndownload done!\r\n");
         }
     }
 }

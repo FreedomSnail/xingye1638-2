@@ -84,6 +84,7 @@ unsigned short sdk_encrypt_interface(unsigned char *pdest, const unsigned char *
 * Internal functions
 *
 **/
+void sdk_stream_store_data(SDKFilter* p_filter, unsigned char in_data);
 
 void sdk_stream_recalc_crc(void* p_data);
 unsigned short sdk_stream_crc16_calc(const unsigned char* pMsg, unsigned int nLen);

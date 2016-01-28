@@ -45,7 +45,7 @@ CPU_STK START_TASK_STK[START_STK_SIZE];
 void start_task(void *p_arg);
 
 //任务优先级
-#define APP_TASK_DJI_CODEC_PRIO		10
+#define APP_TASK_DJI_CODEC_PRIO		12
 //任务堆栈大小	
 #define APP_TASK_DJI_CODEC_STK_SIZE 		1024
 //任务控制块
@@ -89,8 +89,6 @@ CPU_STK TASK_DJI_RELEASE_CTRL_STK[TASK_DJI_RELEASE_CTRL_STK_SIZE];
 void AppTaskDjiReleaseCtrl(void *p_arg);
 
 
-
-
 //任务优先级
 #define TASK_AUTO_NAV_PRIO		8
 //任务堆栈大小
@@ -103,6 +101,21 @@ CPU_STK	TASK_AUTO_NAV_STK[TASK_AUTO_NAV_STK_SIZE];
 
 //任务函数
 void AppTaskAutoNav(void *p_arg);
+
+
+//任务优先级
+#define TASK_CONTROL_PUMP_BOARD_PRIO		9
+//任务堆栈大小
+#define TASK_CONTROL_PUMP_BOARD_STK_SIZE		1024
+//任务控制块
+OS_TCB	TaskControlPumpBoardTCB;
+//任务堆栈
+CPU_STK	TASK_CONTROL_PUMP_BOARD_STK[TASK_CONTROL_PUMP_BOARD_STK_SIZE];
+
+//任务函数
+void AppTaskControlPumpBoard(void *p_arg);
+
+
 
 int main(void)
 {
@@ -120,6 +133,7 @@ int main(void)
 	//USART1_Config(USART1,115200);
 	USART2_Config(USART2,115200);
 	USART3_Config(USART3,115200);
+	UART4_Config(UART4,115200);
 	//NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);//中断分组配置
 	NVIC_Configuration();
 	INTX_ENABLE();		//开中断
@@ -150,8 +164,7 @@ OS_SEM SemDjiCodec;
 OS_SEM SemDjiActivation;
 OS_SEM SemDjiFlightCtrlObtain;
 OS_SEM SemDjiFlightCtrlRelease;
-
-u8 flag_frame=0;
+OS_SEM SemCtrlPump;
 
 OS_Q   QAutoNav;
 void start_task(void *p_arg)
@@ -194,7 +207,10 @@ void start_task(void *p_arg)
                  (CPU_CHAR*	)"3",
                  (OS_SEM_CTR)0,		
                  (OS_ERR*	)&err);
-    
+    OSSemCreate ((OS_SEM*	)&SemCtrlPump,
+                 (CPU_CHAR*	)"4",
+                 (OS_SEM_CTR)0,		
+                 (OS_ERR*	)&err);
 	//创建LED_B任务
 	OSTaskCreate((OS_TCB 	* )&Led0TaskTCB,		
 				 (CPU_CHAR	* )"led0 task", 		
@@ -263,6 +279,19 @@ void start_task(void *p_arg)
                  (void   	* )0,				
                  (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR, 
                  (OS_ERR 	* )&err);	
+    OSTaskCreate((OS_TCB 	* )&TaskControlPumpBoardTCB,		
+				 (CPU_CHAR	* )"5 task", 		
+                 (OS_TASK_PTR )AppTaskControlPumpBoard, 			
+                 (void		* )0,					
+                 (OS_PRIO	  )TASK_CONTROL_PUMP_BOARD_PRIO,     	
+                 (CPU_STK   * )&TASK_CONTROL_PUMP_BOARD_STK[0],	
+                 (CPU_STK_SIZE)TASK_CONTROL_PUMP_BOARD_STK_SIZE/10,	
+                 (CPU_STK_SIZE)TASK_CONTROL_PUMP_BOARD_STK_SIZE,		
+                 (OS_MSG_QTY  )0,					
+                 (OS_TICK	  )0,					
+                 (void   	* )0,				
+                 (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR, 
+                 (OS_ERR 	* )&err);
 	OS_TaskSuspend((OS_TCB*)&StartTaskTCB,&err);		//挂起开始任务			 
 	OS_CRITICAL_EXIT();	//进入临界区
 	OSTaskDel((OS_TCB*)0,&err);	//删除start_task任务自身
@@ -274,8 +303,6 @@ void start_task(void *p_arg)
 void AppTaskDjiSDKCodec(void *p_arg)
 {
 	OS_ERR err;
-	OS_SEM_CTR SemFlag;
-	u8 msg;
 	p_arg = p_arg;
 	while(1) {
 		//LOG_DJI_STR(" ");
@@ -294,8 +321,6 @@ void AppTaskDjiActivation(void *p_arg)
 	OS_ERR err;
 	u8 msg = MSG_TYPE_RC_CTRL;
 	u8 nav_flag=0;
-	
-	CPU_SR_ALLOC();
 	p_arg = p_arg;
 	DJI_Onboard_API_Activation_Init();
 	while(1) {
@@ -311,7 +336,7 @@ void AppTaskDjiActivation(void *p_arg)
 		OSTimeDlyHMSM(0, 0, 1, 0, OS_OPT_TIME_HMSM_STRICT,&err);
 		send_flight_data((float)std_broadcast_data.pos.lati,(float)std_broadcast_data.pos.longti,(float)std_broadcast_data.pos.alti, (float)std_broadcast_data.pos.height,0, core_state.target_waypoint, 0,1,1,1,0);
 		#if 1
-		//LOG_DJI_VALUE("\r\sss=%d\r\n",std_broadcast_data.ctrl_info.cur_ctrl_dev_in_navi_mode);
+		//LOG_DJI_VALUE("\r\nss=%d\r\n",GetRcGearInfo());
 		if((std_broadcast_data.ctrl_info.cur_ctrl_dev_in_navi_mode == 1)) {//app control
 			if(nav_flag<2) {
 				nav_flag++;
@@ -329,6 +354,7 @@ void AppTaskDjiActivation(void *p_arg)
 				#endif
 			}
 			LED_B= 0;
+			  
 		}
 		#endif
 		//LED_R;
@@ -341,7 +367,6 @@ void AppTaskDjiObtainCtrl(void *p_arg)
 	OS_ERR err;
 	u8 msg = MSG_TYPE_NAV_OBTAIN_CTL;
 	u8 cnt;
-	CPU_SR_ALLOC();
 	p_arg = p_arg;
 	while(1) {
 		OSSemPend(&SemDjiFlightCtrlObtain, 0, OS_OPT_PEND_BLOCKING,0,&err); 
@@ -372,8 +397,6 @@ void AppTaskDjiObtainCtrl(void *p_arg)
 void AppTaskDjiReleaseCtrl(void *p_arg)
 {
 	OS_ERR err;
-	u8 *msg;
-	CPU_SR_ALLOC();
 	p_arg = p_arg;	
 	while(1) {
 		OSSemPend(&SemDjiFlightCtrlRelease, 0, OS_OPT_PEND_BLOCKING,0,&err); 
@@ -401,7 +424,6 @@ void AppTaskAutoNav(void *p_arg)
 	OS_MSG_SIZE size;
 	u8 status=AUTO_NAV_STATUS_IDLE;
 	u8 cnt = 0;
-	CPU_SR_ALLOC();
 	p_arg = p_arg;	
 	
 	while(1) {
@@ -492,31 +514,17 @@ void AppTaskAutoNav(void *p_arg)
 	}
 }
 
-
-//浮点测试任务
-void AppTaskuotANav(void *p_arg)
+void AppTaskControlPumpBoard(void *p_arg)
 {
-	static float float_num=0.01;
-	u8 len=0;
-	CPU_SR_ALLOC();
-	while(1)
-	{
-		float_num+=0.01f;
-		OS_CRITICAL_ENTER();	//进入临界区
-		//LOG_DJI_VALUE("%.4f\r\n",float_num);
-		#if 0
-		len++;
-		len %= 9;
-		if(len < 1) {
-			DJI_Onboard_send("  ", 2);
-		} else {
-			//DJI_Onboard_send("12345678", len);
-			send_data_to_mobile("12345678",len);
+	OS_ERR err;
+	p_arg = p_arg;
+	while(1) {
+		OSSemPend(&SemCtrlPump, 200, OS_OPT_PEND_BLOCKING,0,&err); 
+		if(OS_ERR_NONE==err) {
+			
 		}
-		#endif
-		//printf("float_num的值为: %.4f\r\n",y);
-		OS_CRITICAL_EXIT();		//退出临界区
-		delay_ms(900);			//延时500ms
+		USART_OUT(UART4, "ouijh\r\n");
+		//delay_ms(900);			//延时500ms
 		//LED_R= ~LED_R;
 	}
 }

@@ -329,12 +329,17 @@ extern OS_Q   QAutoNav;
 extern ProFrameData_Unit  DataFromDji;
 //extern sdk_std_msg_t  FlightMsg;
 
+void DJI_Onboard_API_Activation_Init(void);
+
 void DJI_Onboard_API_Activation(void);
 
 void DJI_Onboard_API_Control(unsigned char arg);
 
 void DJI_Onboard_send(u8* str, u8 len);
 void send_data_to_mobile(u8 *data,unsigned char len);
+
+int DJI_Pro_Attitude_Control(attitude_data_t *p_user_data);
+
 
 void Pro_Receive_Interface(void);
 void Updata_Flight_Data(void);
