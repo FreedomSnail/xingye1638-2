@@ -29,7 +29,6 @@ JLinkLog.txt
 *.pch
 
 # Libraries
-
 *.a
 *.la
 *.lo
