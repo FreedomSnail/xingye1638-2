@@ -70,6 +70,9 @@
 #define MAKE_VERSION(a,b,c,d) (((a << 24)&0xff000000) | ((b << 16)&0x00ff0000) | ((c << 8)&0x0000ff00) | (d&0x000000ff))
 #define SDK_VERSION           (MAKE_VERSION(3,1,100,0))
 
+#define DATA_LENGTH_RECEIVE_PUMP_CONTROL_BOARD	27
+#define DATA_LENGTH_SEND_PUMP_CONTROL_BOARD		13
+
 
 // data_type
 typedef float 	fp32;

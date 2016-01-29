@@ -965,15 +965,20 @@ void Pro_Receive_Pump_Ctrl_Board(void)
 {
   	int Heard_CRC32=0;
 	memcpy(&Heard_CRC32,&UartPumpCtrl.RxDataBuf[UartPumpCtrl.DataLen - _SDK_CRC_DATA_SIZE] ,_SDK_CRC_DATA_SIZE);
+	if(UartPumpCtrl.DataLen != DATA_LENGTH_SEND_PUMP_CONTROL_BOARD) {	//检查数据长度是否一致
+		return;
+	}
 	if(sdk_stream_crc32_calc((unsigned char*)UartPumpCtrl.RxDataBuf, UartPumpCtrl.DataLen - _SDK_CRC_DATA_SIZE)!=Heard_CRC32) {
 		return;//整体校验
 	}
 	pumpBoardInfo.is_pump_running = UartPumpCtrl.RxDataBuf[4];
 	memcpy((unsigned char*)&pumpBoardInfo.pump_voltage,UartPumpCtrl.RxDataBuf+5,4);	//水泵电压
+	#if 0
 	memcpy((unsigned char*)&pumpBoardInfo.supply_voltage,UartPumpCtrl.RxDataBuf+9,4);	//供电电压
 	memcpy((unsigned char*)&pumpBoardInfo.is_dose_run_out,UartPumpCtrl.RxDataBuf+13,1);	//农药剩余量
 	
 	memcpy((unsigned char*)&pumpBoardInfo.device_id,UartPumpCtrl.RxDataBuf+14,8);	//机身编码
 	memcpy((unsigned char*)&pumpBoardInfo.is_usable,UartPumpCtrl.RxDataBuf+22,1);	//授权信息
+	#endif
 }
 
