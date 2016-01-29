@@ -334,7 +334,17 @@ void AppTaskDjiActivation(void *p_arg)
 	}
 	while(1) {
 		OSTimeDlyHMSM(0, 0, 1, 0, OS_OPT_TIME_HMSM_STRICT,&err);
-		send_flight_data((float)std_broadcast_data.pos.lati,(float)std_broadcast_data.pos.longti,(float)std_broadcast_data.pos.alti, (float)std_broadcast_data.pos.height,0, core_state.target_waypoint, 0,1,1,1,0);
+		send_flight_data(	(float)std_broadcast_data.pos.lati,
+							(float)std_broadcast_data.pos.longti,
+							(float)std_broadcast_data.pos.alti, 
+							(float)std_broadcast_data.pos.height,
+							0, 
+							core_state.target_waypoint, 
+							0,
+							pumpBoardInfo.pump_voltage,		//水泵电压
+							pumpBoardInfo.is_usable,		//授权信息
+							pumpBoardInfo.is_pump_running,	//水泵运行状态
+							pumpBoardInfo.is_dose_run_out);	//农药剩余量信息
 		#if 1
 		//LOG_DJI_VALUE("\r\nss=%lld\r\n",1509200000097);
 		if((std_broadcast_data.ctrl_info.cur_ctrl_dev_in_navi_mode == 1)) {//app control
@@ -551,32 +561,22 @@ void AppTaskControlPumpBoard(void *p_arg)
 	p_arg = p_arg;
 	cmd[0] = 0xAA;
 	cmd[1] = DATA_LENGTH_SEND_PUMP_CONTROL_BOARD;	//13个字节长度
-	cmd[2] = 0x02;
-	cmd[3] = 0x02;
+	cmd[2] = 0x0;
+	cmd[3] = 0xFE;
 	while(1) {
 		OSSemPend(&SemCtrlPump, 200, OS_OPT_PEND_BLOCKING,0,&err); 
 		if(OS_ERR_NONE==err) {
 			Pro_Receive_Pump_Ctrl_Board();
-			printf("%d %f\r\n",pumpBoardInfo.is_pump_running,pumpBoardInfo.pump_voltage);
+			printf("%d %f %f %d %d %lld\r\n",pumpBoardInfo.is_pump_running,pumpBoardInfo.pump_voltage,
+			pumpBoardInfo.supply_voltage,pumpBoardInfo.is_dose_run_out,pumpBoardInfo.is_usable,pumpBoardInfo.device_id);
 		}
-		#if 0
 		if(GetRcGearInfo()>0) {//开水泵
-			pumpBoardInfo.is_pump_running = TRUE;
+			cmd[4] = TRUE;
 		} else {	//关水泵
-			pumpBoardInfo.is_pump_running = FALSE;
+			cmd[4] = FALSE;
 		}
-		cmd[4] = pumpBoardInfo.is_pump_running;
-		memcpy(cmd+5,(u8 *)pumpBoardInfo.pump_voltage,4);
-		#else
-		if(GetRcGearInfo()>0) {//开水泵
-			cmd[4] = 1;
-		} else {	//关水泵
-			cmd[4] = 0;
-		}
-		cmd[4] = 5;
-		temp = 16.7f;
+		temp = 16.0f;
 		memcpy(cmd+5,(u8 *)&temp,4);
-		#endif
 		send_cmd_to_pump_board(cmd, DATA_LENGTH_SEND_PUMP_CONTROL_BOARD);
 		
 	}
