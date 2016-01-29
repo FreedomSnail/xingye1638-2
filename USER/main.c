@@ -336,7 +336,7 @@ void AppTaskDjiActivation(void *p_arg)
 		OSTimeDlyHMSM(0, 0, 1, 0, OS_OPT_TIME_HMSM_STRICT,&err);
 		send_flight_data((float)std_broadcast_data.pos.lati,(float)std_broadcast_data.pos.longti,(float)std_broadcast_data.pos.alti, (float)std_broadcast_data.pos.height,0, core_state.target_waypoint, 0,1,1,1,0);
 		#if 1
-		//LOG_DJI_VALUE("\r\nss=%d\r\n",GetRcGearInfo());
+		//LOG_DJI_VALUE("\r\nss=%lld\r\n",1509200000097);
 		if((std_broadcast_data.ctrl_info.cur_ctrl_dev_in_navi_mode == 1)) {//app control
 			if(nav_flag<2) {
 				nav_flag++;
@@ -513,19 +513,64 @@ void AppTaskAutoNav(void *p_arg)
 		#endif
 	}
 }
+/*******************************************************************************
+* Function Name  : USART2_IRQHandler
+* Description    : This function handles USART2 global interrupt request.
+* Input          : None
+* Output         : None
+* Return         : None
+	与水泵控制板的串口数据通讯协议说明(借鉴djisdk协议)
 
+协议帧
+	|<帧头段>|<-帧数据段->|<--帧尾段-->|
+	|SOF |LEN|    DATA    |    CRC32   |
+帧结构
+字段	索引（byte）	大小（bit）		说明
+SOF			0				8			帧起始标识，固定为0xAA
+LEN			1				8			帧长度标识
+DATA		2			长度不定		帧数据段
+CRC32	大小不定			32			整个帧的 CRC32 校验值
+
+数据帧
+|<-------帧数据段------->|
+|CMD SET|CMD ID|CMD VALUE|
+命令集 0x00 命令码 0xFE 透传数据（飞控板至水泵控制板）
+CMD VALUE由[水泵开关状态8bit]+[水泵电压32bit]组成
+
+
+命令集 0x02 命令码 0x02 透传数据（水泵控制板至飞控板）
+CMD VALUE由[水泵开关状态8bit]+[水泵电压32bit]+[供电电压32bit]+[农药量状态8bit]+[机身编码64bit]+[授权状态8bit]组成
+
+
+*******************************************************************************/
 void AppTaskControlPumpBoard(void *p_arg)
 {
 	OS_ERR err;
+	u8 cmd[13];
+	toFloat f;
 	p_arg = p_arg;
+	cmd[0] = 0xAA;
+	cmd[1] = 0x0D;	//13个字节长度
+	cmd[2] = 0x0;
+	cmd[3] = 0xFE;
 	while(1) {
 		OSSemPend(&SemCtrlPump, 200, OS_OPT_PEND_BLOCKING,0,&err); 
 		if(OS_ERR_NONE==err) {
 			
 		}
-		USART_OUT(UART4, "ouijh\r\n");
-		//delay_ms(900);			//延时500ms
-		//LED_R= ~LED_R;
+		if(GetRcGearInfo()>0) {//开水泵
+			pumpBoardInfo.is_pump_running = TRUE;
+		} else {	//关水泵
+			pumpBoardInfo.is_pump_running = FALSE;
+		}
+		f.value = pumpBoardInfo.pump_voltage;
+		
+		cmd[4] = pumpBoardInfo.is_pump_running;
+		cmd[5] = f.bytePtr[0];
+		cmd[6] = f.bytePtr[1];
+		cmd[7] = f.bytePtr[2];
+		cmd[8] = f.bytePtr[3];
+		send_cmd_to_pump_board(cmd, 13);
 	}
 }
 

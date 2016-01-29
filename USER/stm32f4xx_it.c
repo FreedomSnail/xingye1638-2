@@ -283,6 +283,29 @@ void USART3_IRQHandler(void)
 * Input          : None
 * Output         : None
 * Return         : None
+	与水泵控制板的串口数据通讯协议说明(借鉴djisdk协议)
+
+协议帧
+	|<帧头段>|<-帧数据段->|<--帧尾段-->|
+	|SOF |LEN|    DATA    |    CRC32   |
+帧结构
+字段	索引（byte）	大小（bit）		说明
+SOF			0				8			帧起始标识，固定为0xAA
+LEN			1				8			帧长度标识
+DATA		2			长度不定		帧数据段
+CRC32	大小不定			32			整个帧的 CRC32 校验值
+
+数据帧
+|<-------帧数据段------->|
+|CMD SET|CMD ID|CMD VALUE|
+命令集 0x00 命令码 0xFE 透传数据（飞控板至水泵控制板）
+CMD VALUE由[水泵开关状态8bit]+[水泵电压32bit]组成
+
+
+命令集 0x02 命令码 0x02 透传数据（水泵控制板至飞控板）
+CMD VALUE由[水泵开关状态8bit]+[水泵电压32bit]+[供电电压32bit]+[农药量状态8bit]+[机身编码64bit]+[授权状态8bit]组成
+
+
 *******************************************************************************/
 void UART4_IRQHandler(void)
 {
@@ -295,8 +318,8 @@ void UART4_IRQHandler(void)
 	if(USART_GetITStatus(UART4, USART_IT_RXNE) != RESET) {	//判断读寄存器是否非空	
     	// Read one byte from the receive data register
     	Rev= USART_ReceiveData(UART4);   //将读寄存器的数据缓存到接收缓冲区里
-		USART_SendData(UART4,Rev);
-		while(USART_GetFlagStatus(UART4, USART_FLAG_TC)==RESET);
+		//USART_SendData(UART4,Rev);while(USART_GetFlagStatus(UART4, USART_FLAG_TC)==RESET);
+		
   	}
 	//用户程序..
 	#if SYSTEM_SUPPORT_UCOS  

@@ -48,9 +48,9 @@ float flight_plan_offset = 0;   ///<线间距
 float task_area = 0;            ///<航线面积
 float task_distance = 0;        ///<航线总距离
 
+pump_board_data_t pumpBoardInfo;
 
-uint32_t device_id = 150920097;///<出厂编号
-uint8_t is_usable = TRUE;///<是否可用
+
 
 u16 array_to_short(u8 *array)
 {
@@ -398,67 +398,6 @@ void Updata_Flight_Data(void)
 	}
 	#endif
 }
-#if 0
-/************************************************************************************************
-** Function name :			
-** Description :
-** 
-** Input :
-** Output :
-** Return :
-** Others :
-** 
-************************************************************************************************/
-void Updata_Flight_Data(void)
-{
-	u16 packageStatus;
-	u8 offSet=2;
-	packageStatus = array_to_short(&DataFromDji.data[0]);
-	//printf("p=%d\r\n",packageStatus);
-	#if 1
-	if(packageStatus & (1<<0)) {		//时间戳
-		offSet += FLIGHT_DATA_TIME_STAMP_SIZE;
-	}
-	if(packageStatus & (1<<1)) {		//姿态四元素
-		FlightMsg.q.q0 = array_to_float(DataFromDji.data+offSet);
-		FlightMsg.q.q1 = array_to_float(&DataFromDji.data[offSet+4]);
-		FlightMsg.q.q2 = array_to_float(&DataFromDji.data[offSet+8]);
-		FlightMsg.q.q3 = array_to_float(&DataFromDji.data[offSet+12]);
-		printf("Q=%f %f %f %f\r\n",FlightMsg.q.q0,FlightMsg.q.q1,FlightMsg.q.q2,FlightMsg.q.q3);
-		offSet += FLIGHT_DATA_ATTITUDE_SIZE;
-	}
-	
-	if(packageStatus & (1<<2)) {		//加速度
-		offSet += FLIGHT_DATA_ACCELERATE_SIZE;
-	}
-	if(packageStatus & (1<<3)) {		//速度
-		FlightMsg.v.x = array_to_float(&DataFromDji.data[offSet]);
-		FlightMsg.v.y = array_to_float(&DataFromDji.data[offSet+4]);
-		FlightMsg.v.z= array_to_float(&DataFromDji.data[offSet+8]);
-		printf("SPD=%f %f %f\r\n",FlightMsg.v.x,FlightMsg.v.y,FlightMsg.v.z);
-		offSet += FLIGHT_DATA_SPEED_SIZE;
-	}
-	if(packageStatus & (1<<4)) {		//角速度
-		offSet += FLIGHT_DATA_ANGLE_SPEED_SIZE;
-	}
-	if(packageStatus & (1<<5)) {		//gps
-		FlightMsg.pos.lati = array_to_double(&DataFromDji.data[offSet]);
-		FlightMsg.pos.longti = array_to_double(&DataFromDji.data[offSet+8]);
-		FlightMsg.pos.alti = array_to_float(&DataFromDji.data[offSet+12]);
-		FlightMsg.pos.height = array_to_float(&DataFromDji.data[offSet+16]);
-		printf("GPS=%lf %lf %f %f\r\n",FlightMsg.pos.lati,FlightMsg.pos.longti,FlightMsg.pos.alti,FlightMsg.pos.height);
-		offSet += FLIGHT_DATA_GPS_SIZE;
-	}
-	if(packageStatus & (1<<6)) {		//磁感器
-		FlightMsg.mag.x = array_to_short(&DataFromDji.data[offSet]);
-		FlightMsg.mag.y = array_to_short(&DataFromDji.data[offSet+2]);
-		FlightMsg.mag.z = array_to_short(&DataFromDji.data[offSet+4]);
-		printf("MAGNETIC=%d %d %d\r\n",FlightMsg.mag.x,FlightMsg.mag.y,FlightMsg.mag.z);
-		offSet += FLIGHT_DATA_MAGNETIC_SIZE;
-	}
-	#endif
-}
-#endif
 /************************************************************************************************
 ** Function name :			
 ** Description :
@@ -664,7 +603,7 @@ void send_data_to_mobile(u8 *data,unsigned char len)
  * @param device_id 出厂编号
  * @param is_usable 是否可用
  */
-void send_device_info(uint32_t device_id, uint8_t is_usable)
+void send_device_info(uint64_t device_id, uint8_t is_usable)
 {
     uint8_t cmd[7];
     cmd[0] = 0x08;
@@ -873,7 +812,7 @@ void handle_transparent_transmission(u8 *buf)
         }
         else if(buf[1] == 0x02)//获取设备信息
         {
-            send_device_info(device_id,is_usable);
+            //send_device_info(device_id,is_usable);
         }
         else if(buf[1] == 0x03)//增加航线高度
         {
@@ -992,4 +931,13 @@ void handle_transparent_transmission(u8 *buf)
         }
     }
 }
-
+void send_cmd_to_pump_board(u8* str,u8 len)
+{
+	toInt a;
+	a.value = sdk_stream_crc32_calc(str,len-_SDK_CRC_DATA_SIZE);
+	*(str+len-_SDK_CRC_DATA_SIZE)   = a.bytePtr[0];
+	*(str+len-_SDK_CRC_DATA_SIZE+1) = a.bytePtr[1];
+	*(str+len-_SDK_CRC_DATA_SIZE+2) = a.bytePtr[2];
+	*(str+len-_SDK_CRC_DATA_SIZE+3) = a.bytePtr[3];
+	USART_Send_Buf(SERIAL_PORT_PUMP_BOARD,str,len);
+}

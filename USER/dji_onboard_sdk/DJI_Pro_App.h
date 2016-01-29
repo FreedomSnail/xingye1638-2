@@ -104,6 +104,12 @@ typedef union
 typedef union 
 {
     unsigned char bytePtr[4];
+    uint32_t value;
+}toInt;
+
+typedef union 
+{
+    unsigned char bytePtr[4];
     float value;
 }toFloat;
 
@@ -307,6 +313,17 @@ typedef struct ProFrameData_Unit
 	unsigned short dataLen;
 }ProFrameData_Unit;
 
+typedef struct
+{
+	unsigned char is_pump_running;	//水泵是否工作
+	float pump_voltage;				//水泵工作电压
+	float supply_voltage;			//供电电压，外部提供给水泵控制板的电压
+	unsigned char is_dose_run_out;	//农药量是否耗尽
+	unsigned char is_usable;		//是否可用
+	uint64_t device_id;				//出厂编号
+}pump_board_data_t;
+
+
 
 typedef void (*Command_Result_Notify)(unsigned short result);
 
@@ -322,12 +339,13 @@ extern OS_SEM SemDjiCodec;
 extern OS_SEM SemDjiActivation;
 extern OS_SEM SemDjiFlightCtrlObtain;
 extern OS_SEM SemDjiFlightCtrlRelease;
+extern OS_SEM SemCtrlPump;
 extern OS_Q   QAutoNav;
 
 
 
 extern ProFrameData_Unit  DataFromDji;
-//extern sdk_std_msg_t  FlightMsg;
+extern pump_board_data_t pumpBoardInfo;
 
 void DJI_Onboard_API_Activation_Init(void);
 
@@ -351,6 +369,8 @@ void send_flight_data(float latitude, float longitude, float altitude,
 
 
 void handle_transparent_transmission(u8 *buf);
+
+void send_cmd_to_pump_board(u8* str,u8 len);
 
 
 #endif
