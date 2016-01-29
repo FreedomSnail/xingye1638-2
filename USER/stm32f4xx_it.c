@@ -309,8 +309,10 @@ CMD VALUE由[水泵开关状态8bit]+[水泵电压32bit]+[供电电压32bit]+[农药量状态8bit]+
 *******************************************************************************/
 void UART4_IRQHandler(void)
 {
-//	OS_ERR err;
+	OS_ERR err;
 	u8 Rev;
+	static DjiSDKPackageStatus_TypeEnum DjiPackageStatus = DJI_PACKAGE_RECV_IDLE;
+
 	#if SYSTEM_SUPPORT_UCOS  //使用UCOS操作系统
 	OSIntEnter();    
 	#endif
@@ -319,6 +321,36 @@ void UART4_IRQHandler(void)
     	// Read one byte from the receive data register
     	Rev= USART_ReceiveData(UART4);   //将读寄存器的数据缓存到接收缓冲区里
 		//USART_SendData(UART4,Rev);while(USART_GetFlagStatus(UART4, USART_FLAG_TC)==RESET);
+		switch(DjiPackageStatus) {
+			case DJI_PACKAGE_RECV_IDLE:
+				if(Rev == _SDK_SOF) {
+			 		DjiPackageStatus = DJI_PACKAGE_RECV_START;
+			 		UartPumpCtrl.RxIndex = 0;
+			 		UartPumpCtrl.RxDataBuf[UartPumpCtrl.RxIndex] = _SDK_SOF;
+		 		}
+		 		break;
+			case DJI_PACKAGE_RECV_START://收到0xAA紧跟的一个字符
+				UartPumpCtrl.RxIndex++;
+		 		UartPumpCtrl.RxDataBuf[UartPumpCtrl.RxIndex] = Rev;
+		 		UartPumpCtrl.DataLen = Rev;
+		 		DjiPackageStatus = DJI_PACKAGE_RECV_WAIT_DONE;
+		 		break;
+			case DJI_PACKAGE_RECV_WAIT_DONE:
+				UartPumpCtrl.RxIndex++;
+	 			if(UartPumpCtrl.RxIndex < RX_MAX_NUM) {
+		 			UartPumpCtrl.RxDataBuf[UartPumpCtrl.RxIndex] = Rev;
+		 			if(UartPumpCtrl.RxIndex == UartPumpCtrl.DataLen) {
+			 			OSSemPost(&SemCtrlPump,OS_OPT_POST_1,&err);
+		 				DjiPackageStatus = DJI_PACKAGE_RECV_IDLE;
+		 			}
+	 			} else {//接收到的数据致使数组越界
+		 			DjiPackageStatus = DJI_PACKAGE_RECV_IDLE;
+	 			}
+	 			break;
+			default:
+		 		break;
+			
+		}
 		
   	}
 	//用户程序..

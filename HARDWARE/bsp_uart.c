@@ -3,7 +3,7 @@
 #include <stdarg.h>
 #include "bsp_uart.h"
 
-UartTypedef		UartDJI;
+UartTypedef		UartPumpCtrl;
 /*
 
 *********************************************************************************************************

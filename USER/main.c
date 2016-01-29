@@ -546,31 +546,36 @@ CMD VALUE由[水泵开关状态8bit]+[水泵电压32bit]+[供电电压32bit]+[农药量状态8bit]+
 void AppTaskControlPumpBoard(void *p_arg)
 {
 	OS_ERR err;
-	u8 cmd[13];
+	u8 cmd[27];
 	toFloat f;
+	int64_t sn = 1601290000001;	//机身编号
 	p_arg = p_arg;
 	cmd[0] = 0xAA;
-	cmd[1] = 0x0D;	//13个字节长度
-	cmd[2] = 0x0;
-	cmd[3] = 0xFE;
+	cmd[1] = 0x1b;	//27个字节长度
+	cmd[2] = 0x02;
+	cmd[3] = 0x02;
 	while(1) {
 		OSSemPend(&SemCtrlPump, 200, OS_OPT_PEND_BLOCKING,0,&err); 
 		if(OS_ERR_NONE==err) {
-			
+			Pro_Receive_Pump_Ctrl_Board();
+			printf("%d %f %f %d %d %lld\r\n",pumpBoardInfo.is_pump_running,pumpBoardInfo.pump_voltage,
+			pumpBoardInfo.supply_voltage,pumpBoardInfo.is_dose_run_out,pumpBoardInfo.is_usable,pumpBoardInfo.device_id);
 		}
-		if(GetRcGearInfo()>0) {//开水泵
-			pumpBoardInfo.is_pump_running = TRUE;
-		} else {	//关水泵
-			pumpBoardInfo.is_pump_running = FALSE;
-		}
-		f.value = pumpBoardInfo.pump_voltage;
-		
-		cmd[4] = pumpBoardInfo.is_pump_running;
+		cmd[4] = 5;			//水泵工作状态，开
+		f.value = 16.8f;	//水泵电压
 		cmd[5] = f.bytePtr[0];
 		cmd[6] = f.bytePtr[1];
 		cmd[7] = f.bytePtr[2];
 		cmd[8] = f.bytePtr[3];
-		send_cmd_to_pump_board(cmd, 13);
+		f.value = 24.5f;	//供电电压电压
+		cmd[9] = f.bytePtr[0];
+		cmd[10] = f.bytePtr[1];
+		cmd[11] = f.bytePtr[2];
+		cmd[12] = f.bytePtr[3];
+		cmd[13] = 8;			//农药剩余量信息，还有农药
+		memcpy(&cmd[14],(unsigned char*)&sn,8);	//机身编号 
+		cmd[22] = '1';	//授权码
+		send_cmd_to_flight_ctrl_board(cmd, 27);
 	}
 }
 

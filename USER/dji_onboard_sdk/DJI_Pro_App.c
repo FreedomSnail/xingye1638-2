@@ -941,3 +941,39 @@ void send_cmd_to_pump_board(u8* str,u8 len)
 	*(str+len-_SDK_CRC_DATA_SIZE+3) = a.bytePtr[3];
 	USART_Send_Buf(SERIAL_PORT_PUMP_BOARD,str,len);
 }
+void send_cmd_to_flight_ctrl_board(u8* str,u8 len)
+{
+	toInt a;
+	a.value = sdk_stream_crc32_calc(str,len-_SDK_CRC_DATA_SIZE);
+	*(str+len-_SDK_CRC_DATA_SIZE)   = a.bytePtr[0];
+	*(str+len-_SDK_CRC_DATA_SIZE+1) = a.bytePtr[1];
+	*(str+len-_SDK_CRC_DATA_SIZE+2) = a.bytePtr[2];
+	*(str+len-_SDK_CRC_DATA_SIZE+3) = a.bytePtr[3];
+	USART_Send_Buf(SERIAL_PORT_PUMP_BOARD,str,len);
+}
+/************************************************************************************************
+** Function name :			
+** Description :
+** 
+** Input :
+** Output :
+** Return :
+** Others :
+** 
+************************************************************************************************/
+void Pro_Receive_Pump_Ctrl_Board(void)
+{
+  	int Heard_CRC32=0;
+	memcpy(&Heard_CRC32,&UartPumpCtrl.RxDataBuf[UartPumpCtrl.DataLen - _SDK_CRC_DATA_SIZE] ,_SDK_CRC_DATA_SIZE);
+	if(sdk_stream_crc32_calc((unsigned char*)UartPumpCtrl.RxDataBuf, UartPumpCtrl.DataLen - _SDK_CRC_DATA_SIZE)!=Heard_CRC32) {
+		return;//整体校验
+	}
+	pumpBoardInfo.is_pump_running = UartPumpCtrl.RxDataBuf[4];
+	memcpy((unsigned char*)&pumpBoardInfo.pump_voltage,UartPumpCtrl.RxDataBuf+5,4);	//水泵电压
+	memcpy((unsigned char*)&pumpBoardInfo.supply_voltage,UartPumpCtrl.RxDataBuf+9,4);	//供电电压
+	memcpy((unsigned char*)&pumpBoardInfo.is_dose_run_out,UartPumpCtrl.RxDataBuf+13,1);	//农药剩余量
+	
+	memcpy((unsigned char*)&pumpBoardInfo.device_id,UartPumpCtrl.RxDataBuf+14,8);	//机身编码
+	memcpy((unsigned char*)&pumpBoardInfo.is_usable,UartPumpCtrl.RxDataBuf+22,1);	//授权信息
+}
+

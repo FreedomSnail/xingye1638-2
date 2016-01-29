@@ -372,5 +372,8 @@ void handle_transparent_transmission(u8 *buf);
 
 void send_cmd_to_pump_board(u8* str,u8 len);
 
+void send_cmd_to_flight_ctrl_board(u8* str,u8 len);
+
+void Pro_Receive_Pump_Ctrl_Board(void);
 
 #endif
