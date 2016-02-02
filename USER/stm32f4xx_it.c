@@ -333,7 +333,13 @@ void UART4_IRQHandler(void)
 				UartPumpCtrl.RxIndex++;
 		 		UartPumpCtrl.RxDataBuf[UartPumpCtrl.RxIndex] = Rev;
 		 		UartPumpCtrl.DataLen = Rev;
-		 		DjiPackageStatus = DJI_PACKAGE_RECV_WAIT_DONE;
+		 		//固定只接收水泵控制板上传的电压，开关状态等信息
+		 		if(DATA_LENGTH_RECEIVE_PUMP_CONTROL_BOARD == UartPumpCtrl.DataLen) {
+					DjiPackageStatus = DJI_PACKAGE_RECV_WAIT_DONE;
+		 		} else {
+					DjiPackageStatus = DJI_PACKAGE_RECV_IDLE;
+		 		}
+		 		
 		 		break;
 			case DJI_PACKAGE_RECV_WAIT_DONE:
 				UartPumpCtrl.RxIndex++;
