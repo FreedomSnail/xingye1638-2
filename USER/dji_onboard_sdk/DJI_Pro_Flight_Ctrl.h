@@ -16,9 +16,11 @@ extern float task_speed;           ///<º½ÏßËÙ¶È
 extern sdk_std_msg_t std_broadcast_data;
 void ctrl_attitude_alt(float pitch, float roll, float yaw, float altitude);
 
+int16_t GetRcGearInfo(void);
 
 
 u8 auto_nav_check_gps(void);
+
 void auto_nav_math_init(void);
 
 u8 auto_nav_check_height(void);

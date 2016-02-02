@@ -48,9 +48,9 @@ float flight_plan_offset = 0;   ///<线间距
 float task_area = 0;            ///<航线面积
 float task_distance = 0;        ///<航线总距离
 
+pump_board_data_t pumpBoardInfo;
 
-uint32_t device_id = 1509280000097;///<出厂编号
-uint8_t is_usable = TRUE;///<是否可用
+
 
 u16 array_to_short(u8 *array)
 {
@@ -398,67 +398,6 @@ void Updata_Flight_Data(void)
 	}
 	#endif
 }
-#if 0
-/************************************************************************************************
-** Function name :			
-** Description :
-** 
-** Input :
-** Output :
-** Return :
-** Others :
-** 
-************************************************************************************************/
-void Updata_Flight_Data(void)
-{
-	u16 packageStatus;
-	u8 offSet=2;
-	packageStatus = array_to_short(&DataFromDji.data[0]);
-	//printf("p=%d\r\n",packageStatus);
-	#if 1
-	if(packageStatus & (1<<0)) {		//时间戳
-		offSet += FLIGHT_DATA_TIME_STAMP_SIZE;
-	}
-	if(packageStatus & (1<<1)) {		//姿态四元素
-		FlightMsg.q.q0 = array_to_float(DataFromDji.data+offSet);
-		FlightMsg.q.q1 = array_to_float(&DataFromDji.data[offSet+4]);
-		FlightMsg.q.q2 = array_to_float(&DataFromDji.data[offSet+8]);
-		FlightMsg.q.q3 = array_to_float(&DataFromDji.data[offSet+12]);
-		printf("Q=%f %f %f %f\r\n",FlightMsg.q.q0,FlightMsg.q.q1,FlightMsg.q.q2,FlightMsg.q.q3);
-		offSet += FLIGHT_DATA_ATTITUDE_SIZE;
-	}
-	
-	if(packageStatus & (1<<2)) {		//加速度
-		offSet += FLIGHT_DATA_ACCELERATE_SIZE;
-	}
-	if(packageStatus & (1<<3)) {		//速度
-		FlightMsg.v.x = array_to_float(&DataFromDji.data[offSet]);
-		FlightMsg.v.y = array_to_float(&DataFromDji.data[offSet+4]);
-		FlightMsg.v.z= array_to_float(&DataFromDji.data[offSet+8]);
-		printf("SPD=%f %f %f\r\n",FlightMsg.v.x,FlightMsg.v.y,FlightMsg.v.z);
-		offSet += FLIGHT_DATA_SPEED_SIZE;
-	}
-	if(packageStatus & (1<<4)) {		//角速度
-		offSet += FLIGHT_DATA_ANGLE_SPEED_SIZE;
-	}
-	if(packageStatus & (1<<5)) {		//gps
-		FlightMsg.pos.lati = array_to_double(&DataFromDji.data[offSet]);
-		FlightMsg.pos.longti = array_to_double(&DataFromDji.data[offSet+8]);
-		FlightMsg.pos.alti = array_to_float(&DataFromDji.data[offSet+12]);
-		FlightMsg.pos.height = array_to_float(&DataFromDji.data[offSet+16]);
-		printf("GPS=%lf %lf %f %f\r\n",FlightMsg.pos.lati,FlightMsg.pos.longti,FlightMsg.pos.alti,FlightMsg.pos.height);
-		offSet += FLIGHT_DATA_GPS_SIZE;
-	}
-	if(packageStatus & (1<<6)) {		//磁感器
-		FlightMsg.mag.x = array_to_short(&DataFromDji.data[offSet]);
-		FlightMsg.mag.y = array_to_short(&DataFromDji.data[offSet+2]);
-		FlightMsg.mag.z = array_to_short(&DataFromDji.data[offSet+4]);
-		printf("MAGNETIC=%d %d %d\r\n",FlightMsg.mag.x,FlightMsg.mag.y,FlightMsg.mag.z);
-		offSet += FLIGHT_DATA_MAGNETIC_SIZE;
-	}
-	#endif
-}
-#endif
 /************************************************************************************************
 ** Function name :			
 ** Description :
@@ -474,7 +413,7 @@ void Pro_Receive_Interface(void)
   	int Heard_CRC32=0;
 	ProFrameData_Unit  RecData;
 	SDKHeader RecHeader ;
-	ProAckParameter Ack;
+//	ProAckParameter Ack;
 	OS_ERR err;
 	memcpy(&RecHeader, serial_sdk.comm_recv_buf,sizeof(SDKHeader));
 	
@@ -664,7 +603,7 @@ void send_data_to_mobile(u8 *data,unsigned char len)
  * @param device_id 出厂编号
  * @param is_usable 是否可用
  */
-void send_device_info(uint32_t device_id, uint8_t is_usable)
+void send_device_info(uint64_t device_id, uint8_t is_usable)
 {
     uint8_t cmd[7];
     cmd[0] = 0x08;
@@ -691,13 +630,15 @@ void send_device_info(uint32_t device_id, uint8_t is_usable)
  * @param is_onboard_controlling 机载设备是否正在控制
  * @param uint8_t is_pump_running 水泵是否在运转
  * @param uint8_t is_dose_run_out 是否药尽
+ * @param uint8_t pump_permission 水泵权限控制
+ * @param uint64_t device_id 水泵板保存的机身编号
  */
 void send_flight_data(float latitude, float longitude, float altitude,
                       float height, float speed, uint8_t target_waypoint,
                       float yaw, float pump_current, uint8_t is_onboard_controlling,
-                      uint8_t is_pump_running, uint8_t is_dose_run_out)
+                      uint8_t is_pump_running, uint8_t is_dose_run_out,uint8_t pump_permission,uint64_t device_id)
 {
-    uint8_t cmd[37];
+    uint8_t cmd[45];
     toFloat tt;
     
     cmd[0] = 0x08;
@@ -751,8 +692,10 @@ void send_flight_data(float latitude, float longitude, float altitude,
     cmd[31] = is_onboard_controlling;
     cmd[32] = is_pump_running;
     cmd[33] = is_dose_run_out;
-
-    send_data_to_mobile(cmd,34);
+    cmd[34] = pump_permission;
+    memcpy(cmd+35,(u8*)&device_id,8);
+	
+    send_data_to_mobile(cmd,43);
 }
 
 /**
@@ -873,7 +816,7 @@ void handle_transparent_transmission(u8 *buf)
         }
         else if(buf[1] == 0x02)//获取设备信息
         {
-            send_device_info(device_id,is_usable);
+            //send_device_info(device_id,is_usable);
         }
         else if(buf[1] == 0x03)//增加航线高度
         {
@@ -915,12 +858,12 @@ void handle_transparent_transmission(u8 *buf)
 
                 if(index == 0)
                 {
-                    core_state.lla_origin.lat = lat/180.0*M_PI;
-                    core_state.lla_origin.lon = lon/180.0*M_PI;
+                    core_state.lla_origin.lat = (double)lat/180.0*M_PI;
+                    core_state.lla_origin.lon = (double)lon/180.0*M_PI;
                     core_state.lla_origin.alt = task_altitude;
                 }
 
-                ap_set_waypoint(index,lat/180.0*M_PI,lon/180.0*M_PI,task_altitude);
+                ap_set_waypoint(index,(double)lat/180.0*M_PI,(double)lon/180.0*M_PI,task_altitude);
 
                 //printf("waypoint from mobile:%d,%f,%f\n",index,lat,lon);
                 //printf("waypoint from mobile enu:%f,%f,%f\n",ap_get_waypoint(index).x,ap_get_waypoint(index).y,ap_get_waypoint(index).z);
@@ -942,8 +885,7 @@ void handle_transparent_transmission(u8 *buf)
                 end_waypoint_transfer();
                 end_waypoint_transfer();
                 end_waypoint_transfer();
-                //printf("waypoint finished\r\n");
-                printf("\r\nupload done!\r\n",index,lat,lon);
+                printf("\r\nupload done!\r\n");
             }
         }
         else if(buf[1] == 0x02)//地面站请求获取航点数据包
@@ -989,8 +931,56 @@ void handle_transparent_transmission(u8 *buf)
             cmd[21] = tt.bytePtr[3];
 
             send_data_to_mobile(cmd,22);
-            printf("\r\ndownload done!\r\n",index,lat,lon);
+            printf("\r\ndownload done!\r\n");
         }
     }
+}
+void send_cmd_to_pump_board(u8* str,u8 len)
+{
+	toInt a;
+	a.value = sdk_stream_crc32_calc(str,len-_SDK_CRC_DATA_SIZE);
+	*(str+len-_SDK_CRC_DATA_SIZE)   = a.bytePtr[0];
+	*(str+len-_SDK_CRC_DATA_SIZE+1) = a.bytePtr[1];
+	*(str+len-_SDK_CRC_DATA_SIZE+2) = a.bytePtr[2];
+	*(str+len-_SDK_CRC_DATA_SIZE+3) = a.bytePtr[3];
+	USART_Send_Buf(SERIAL_PORT_PUMP_BOARD,str,len);
+}
+void send_cmd_to_flight_ctrl_board(u8* str,u8 len)
+{
+	toInt a;
+	a.value = sdk_stream_crc32_calc(str,len-_SDK_CRC_DATA_SIZE);
+	*(str+len-_SDK_CRC_DATA_SIZE)   = a.bytePtr[0];
+	*(str+len-_SDK_CRC_DATA_SIZE+1) = a.bytePtr[1];
+	*(str+len-_SDK_CRC_DATA_SIZE+2) = a.bytePtr[2];
+	*(str+len-_SDK_CRC_DATA_SIZE+3) = a.bytePtr[3];
+	USART_Send_Buf(SERIAL_PORT_PUMP_BOARD,str,len);
+}
+/************************************************************************************************
+** Function name :			
+** Description :
+** 
+** Input :
+** Output :
+** Return :
+** Others :
+** 
+************************************************************************************************/
+void Pro_Receive_Pump_Ctrl_Board(void)
+{
+  	int Heard_CRC32=0;
+	memcpy(&Heard_CRC32,&UartPumpCtrl.RxDataBuf[UartPumpCtrl.DataLen - _SDK_CRC_DATA_SIZE] ,_SDK_CRC_DATA_SIZE);
+	if(UartPumpCtrl.DataLen != DATA_LENGTH_RECEIVE_PUMP_CONTROL_BOARD) {	//检查数据长度是否一致
+		return;
+	}
+	if(sdk_stream_crc32_calc((unsigned char*)UartPumpCtrl.RxDataBuf, UartPumpCtrl.DataLen - _SDK_CRC_DATA_SIZE)!=Heard_CRC32) {
+		return;//整体校验
+	}
+	pumpBoardInfo.is_pump_running = UartPumpCtrl.RxDataBuf[4];
+	memcpy((unsigned char*)&pumpBoardInfo.pump_voltage,UartPumpCtrl.RxDataBuf+5,4);	//水泵电压
+	memcpy((unsigned char*)&pumpBoardInfo.supply_voltage,UartPumpCtrl.RxDataBuf+9,4);	//供电电压
+	memcpy((unsigned char*)&pumpBoardInfo.is_dose_run_out,UartPumpCtrl.RxDataBuf+13,1);	//农药剩余量
+	
+	memcpy((unsigned char*)&pumpBoardInfo.device_id,UartPumpCtrl.RxDataBuf+14,8);	//机身编码
+	memcpy((unsigned char*)&pumpBoardInfo.is_usable,UartPumpCtrl.RxDataBuf+22,1);	//授权信息
 }
 

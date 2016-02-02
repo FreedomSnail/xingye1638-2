@@ -30,7 +30,7 @@ static void Send_Pro_Data(unsigned char *buf)
 
 Memory_Manage_Unit *Request_Send_MMU(unsigned short size)
 {
-	unsigned char i;
+//	unsigned char i;
 	Memory_Manage_Unit *p2mmu ;
 	#if 0
 	for(i = 0 ; i < SESSION_AND_MEM_COUNT; i ++)
@@ -63,7 +63,7 @@ void Free_Send_MMU(Memory_Manage_Unit *mmu)
 
 Session_Queue * Request_Send_Session(unsigned short size)
 {
-	int i;
+//	int i;
 	Session_Queue *p2session=NULL;
 	Memory_Manage_Unit *p2mmu=NULL;
 	#if 0
@@ -165,12 +165,12 @@ int Pro_Send_Interface(ProSendParameter *parameter)
 		Send_Pro_Data(Send_Global_Common_Memory);
 		break;
 	case 1:
-		#if 0
+		#if 1
 		if(global_seq_num == Send_Session_Common_Tab.pre_seq_num)
 		{
 			global_seq_num ++;
 		}
-		printf("ZZ=%d\r\n",global_seq_num);
+		//printf("ZZ=%d\r\n",global_seq_num);
 		Send_Session_Common_Tab.pre_seq_num = global_seq_num;
 
 		ret = sdk_encrypt_interface(Send_Global_Common_Memory,parameter->buf,parameter->length,

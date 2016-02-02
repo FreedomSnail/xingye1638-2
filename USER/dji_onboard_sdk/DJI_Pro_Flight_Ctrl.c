@@ -41,6 +41,22 @@ float task_speed = 0;           ///<º½ÏßËÙ¶È
 
 sdk_std_msg_t std_broadcast_data;
 
+api_common_data_t GetVelInfo(void)
+{
+	return std_broadcast_data.v;
+}
+api_pos_data_t GetPosInfo(void)
+{
+	return std_broadcast_data.pos;
+}
+int GetRcThrottleInfo(void)
+{
+    return std_broadcast_data.rc.throttle;
+}
+int16_t GetRcGearInfo(void)
+{
+    return std_broadcast_data.rc.gear;
+}
 
 void ctrl_attitude_alt(float pitch, float roll, float yaw, float altitude)
 {
@@ -79,19 +95,6 @@ void ctrl_attitude_alt(float pitch, float roll, float yaw, float altitude)
     user_ctrl_data.yaw = yaw;
     DJI_Pro_Attitude_Control(&user_ctrl_data);
     //usleep(20000);
-}
-
-api_common_data_t GetVelInfo(void)
-{
-	return std_broadcast_data.v;
-}
-api_pos_data_t GetPosInfo(void)
-{
-	return std_broadcast_data.pos;
-}
-int GetRcThrottleInfo(void)
-{
-    return std_broadcast_data.rc.throttle;
 }
 
 u8 auto_nav_check_gps(void)
@@ -134,7 +137,7 @@ u8 auto_nav_raise_to_tartget_height(void)
 	api_pos_data_t pos;
     pos = GetPosInfo();
     ctrl_attitude_alt(0, 0, 0, task_altitude);
-	if(fabsf(task_altitude - pos.height) < 0.2){
+	if(fabsf(task_altitude - pos.height) < 0.2f){
 	//printf("pos.height break\n";
  		return 1;
 	} else {
