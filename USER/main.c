@@ -342,9 +342,11 @@ void AppTaskDjiActivation(void *p_arg)
 							core_state.target_waypoint, 
 							0,
 							pumpBoardInfo.pump_voltage,		//水泵电压
-							pumpBoardInfo.is_usable,		//授权信息
+							std_broadcast_data.ctrl_info.cur_ctrl_dev_in_navi_mode,	//飞行控制权是否获取
 							pumpBoardInfo.is_pump_running,	//水泵运行状态
-							pumpBoardInfo.is_dose_run_out);	//农药剩余量信息
+							pumpBoardInfo.is_dose_run_out,	//农药剩余量信息
+							pumpBoardInfo.is_usable,		//授权信息,水泵是否可以使用
+							pumpBoardInfo.device_id);		//机身编号
 		#if 1
 		//LOG_DJI_VALUE("\r\nss=%lld\r\n",1509200000097);
 		if((std_broadcast_data.ctrl_info.cur_ctrl_dev_in_navi_mode == 1)) {//app control
@@ -490,7 +492,7 @@ void AppTaskAutoNav(void *p_arg)
 					auto_nav_math_init();
 					LOG_DJI_STR("\r\nnav init!\r\n");
 				} else {
-					LOG_DJI_STR("\r\npchecking gps!\r\n");
+					LOG_DJI_STR("\r\nchecking gps!\r\n");
 				}
 				break;
 			case AUTO_NAV_STATUS_CHECK_HEIGHT:
@@ -563,12 +565,14 @@ void AppTaskControlPumpBoard(void *p_arg)
 	cmd[1] = DATA_LENGTH_SEND_PUMP_CONTROL_BOARD;	//13个字节长度
 	cmd[2] = 0x0;
 	cmd[3] = 0xFE;
+	cmd[4] = FALSE;
 	while(1) {
-		OSSemPend(&SemCtrlPump, 200, OS_OPT_PEND_BLOCKING,0,&err); 
+		OSSemPend(&SemCtrlPump, 10, OS_OPT_PEND_BLOCKING,0,&err); 
 		if(OS_ERR_NONE==err) {
 			Pro_Receive_Pump_Ctrl_Board();
-			printf("%d %f %f %d %d %lld\r\n",pumpBoardInfo.is_pump_running,pumpBoardInfo.pump_voltage,
-			pumpBoardInfo.supply_voltage,pumpBoardInfo.is_dose_run_out,pumpBoardInfo.is_usable,pumpBoardInfo.device_id);
+			
+			//printf("%d %f %f %d %d %lld\r\n",pumpBoardInfo.is_pump_running,pumpBoardInfo.pump_voltage,
+			//pumpBoardInfo.supply_voltage,pumpBoardInfo.is_dose_run_out,pumpBoardInfo.is_usable,pumpBoardInfo.device_id);
 		}
 		if(GetRcGearInfo()>0) {//开水泵
 			cmd[4] = TRUE;
