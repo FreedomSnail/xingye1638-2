@@ -630,13 +630,15 @@ void send_device_info(uint64_t device_id, uint8_t is_usable)
  * @param is_onboard_controlling 机载设备是否正在控制
  * @param uint8_t is_pump_running 水泵是否在运转
  * @param uint8_t is_dose_run_out 是否药尽
+ * @param uint8_t pump_permission 水泵权限控制
+ * @param uint64_t device_id 水泵板保存的机身编号
  */
 void send_flight_data(float latitude, float longitude, float altitude,
                       float height, float speed, uint8_t target_waypoint,
                       float yaw, float pump_current, uint8_t is_onboard_controlling,
-                      uint8_t is_pump_running, uint8_t is_dose_run_out)
+                      uint8_t is_pump_running, uint8_t is_dose_run_out,uint8_t pump_permission,uint64_t device_id)
 {
-    uint8_t cmd[37];
+    uint8_t cmd[45];
     toFloat tt;
     
     cmd[0] = 0x08;
@@ -690,8 +692,10 @@ void send_flight_data(float latitude, float longitude, float altitude,
     cmd[31] = is_onboard_controlling;
     cmd[32] = is_pump_running;
     cmd[33] = is_dose_run_out;
-
-    send_data_to_mobile(cmd,34);
+    cmd[34] = pump_permission;
+    memcpy(cmd+35,(u8*)&device_id,8);
+	
+    send_data_to_mobile(cmd,43);
 }
 
 /**

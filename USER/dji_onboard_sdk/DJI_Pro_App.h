@@ -368,7 +368,7 @@ void Updata_Flight_Data(void);
 void send_flight_data(float latitude, float longitude, float altitude,
                       float height, float speed, uint8_t target_waypoint,
                       float yaw, float pump_current, uint8_t is_onboard_controlling,
-                      uint8_t is_pump_running, uint8_t is_dose_run_out);
+                      uint8_t is_pump_running, uint8_t is_dose_run_out,uint8_t pump_permission,uint64_t device_id);
 
 
 void handle_transparent_transmission(u8 *buf);
