@@ -594,7 +594,6 @@ void AppTaskControlPumpBoard(void *p_arg)
 		temp = 16.0f;
 		memcpy(cmd+5,(u8 *)&temp,4);
 		send_cmd_to_pump_board(cmd, DATA_LENGTH_SEND_PUMP_CONTROL_BOARD);
-		
 	}
 }
 
