@@ -42,7 +42,7 @@ unsigned char Activation_Ack = 0;//激活成功为1
 //sdk_std_msg_t  FlightMsg;
 
 
-bool_t wp_download_finished = TRUE;
+bool_t wp_download_finished = FALSE;
 uint8_t wp_packet_idx = 0;      ///<航点数据包索引
 float flight_plan_offset = 0;   ///<线间距
 float task_area = 0;            ///<航线面积
@@ -799,15 +799,14 @@ void handle_transparent_transmission(u8 *buf)
         {
             //DJI_Sample_Funny_Ctrl(DRAW_SQUARE_SAMPLE);
             //OSSemPost(&SemDjiFlightCtrlObtain,OS_OPT_POST_1,&err);
-            
-			#if 1
-			OSQPost((OS_Q*		)&QAutoNav, 	
-					(void*		)&msg,
-					(OS_MSG_SIZE)1,
-					(OS_OPT 	)OS_OPT_POST_FIFO,
-					(OS_ERR*	)&err);
-			//printf("\r\npost q!\r\n",index,lat,lon);
-			#endif
+            if(wp_download_finished == TRUE) {
+				OSQPost((OS_Q*		)&QAutoNav, 	
+						(void*		)&msg,
+						(OS_MSG_SIZE)1,
+						(OS_OPT 	)OS_OPT_POST_FIFO,
+						(OS_ERR*	)&err);
+				//printf("\r\npost q!\r\n",index,lat,lon);
+            }
         }
         else if(buf[1] == 0x01)//停止航线飞行
         {

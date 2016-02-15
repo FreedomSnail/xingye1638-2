@@ -345,6 +345,7 @@ extern OS_SEM SemDjiFlightCtrlRelease;
 extern OS_SEM SemCtrlPump;
 extern OS_Q   QAutoNav;
 
+extern unsigned char Activation_Ack ;
 
 
 extern ProFrameData_Unit  DataFromDji;

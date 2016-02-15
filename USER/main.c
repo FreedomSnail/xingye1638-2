@@ -329,6 +329,7 @@ void AppTaskDjiActivation(void *p_arg)
 		OSSemPend(&SemDjiActivation, 200, OS_OPT_PEND_BLOCKING,0,&err); 
 		if(OS_ERR_NONE == err) {
 			LOG_DJI_STR("\r\nActivate ok!\r\n");
+			Activation_Ack = 1;
 			break;
 		}
 	}
@@ -560,12 +561,21 @@ void AppTaskControlPumpBoard(void *p_arg)
 	OS_ERR err;
 	u8 cmd[13];
 	float temp;
+	s16 gearValue;
 	p_arg = p_arg;
 	cmd[0] = 0xAA;
 	cmd[1] = DATA_LENGTH_SEND_PUMP_CONTROL_BOARD;	//13个字节长度
 	cmd[2] = 0x0;
 	cmd[3] = 0xFE;
 	cmd[4] = FALSE;
+	#if 1
+	while (1) {
+		OSSemPend(&SemCtrlPump, 10, OS_OPT_PEND_BLOCKING,0,&err); 
+		if(Activation_Ack == 1) {	//未激活完成之前不发送，防止水泵误动作
+			break;
+		}
+	}
+	#endif
 	while(1) {
 		OSSemPend(&SemCtrlPump, 10, OS_OPT_PEND_BLOCKING,0,&err); 
 		if(OS_ERR_NONE==err) {
@@ -574,15 +584,16 @@ void AppTaskControlPumpBoard(void *p_arg)
 			//printf("%d %f %f %d %d %lld\r\n",pumpBoardInfo.is_pump_running,pumpBoardInfo.pump_voltage,
 			//pumpBoardInfo.supply_voltage,pumpBoardInfo.is_dose_run_out,pumpBoardInfo.is_usable,pumpBoardInfo.device_id);
 		}
-		if(GetRcGearInfo()>0) {//开水泵
+		gearValue = GetRcGearInfo();
+		//printf("%d\r\n",gearValue);
+		if(gearValue==10000) {//开水泵
 			cmd[4] = TRUE;
-		} else {	//关水泵
+		} else if(gearValue==-10000){	//关水泵
 			cmd[4] = FALSE;
 		}
 		temp = 16.0f;
 		memcpy(cmd+5,(u8 *)&temp,4);
 		send_cmd_to_pump_board(cmd, DATA_LENGTH_SEND_PUMP_CONTROL_BOARD);
-		
 	}
 }
 
