@@ -94,7 +94,6 @@ void ctrl_attitude_alt(float pitch, float roll, float yaw, float altitude)
     user_ctrl_data.thr_z = target_alt;
     user_ctrl_data.yaw = yaw;
     DJI_Pro_Attitude_Control(&user_ctrl_data);
-    //usleep(20000);
 }
 
 u8 auto_nav_check_gps(void)
@@ -134,16 +133,21 @@ u8 auto_nav_check_height(void)
 
 u8 auto_nav_raise_to_tartget_height(void)
 {
-	api_pos_data_t pos;
-    pos = GetPosInfo();
+	float height;
+	float v;
+	u8 result = 0;
+    height = GetPosInfo().height;
+    v = GetVelInfo().z;
     ctrl_attitude_alt(0, 0, 0, task_altitude);
-	printf("task_altitude=%f pos.height=%f\n",task_altitude,pos.height);
-	if(fabsf(task_altitude - pos.height) < 0.2f){
-	//printf("pos.height break\n";
- 		return 1;
-	} else {
-		return 0;
-	}  
+	//printf("v=%f,%f\n",height,v);
+	if((task_altitude - height) < 0.1f) {
+		result = 1;
+	} else if((task_altitude - height) < 0.5f){
+		if(v<0.03f) {
+			result = 1;
+		}
+	}
+	return result;
 }
 
 u8 auto_nav(void)
