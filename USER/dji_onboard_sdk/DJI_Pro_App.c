@@ -41,7 +41,7 @@ ProFrameData_Unit  DataFromDji;
 unsigned char Activation_Ack = 0;//激活成功为1
 //sdk_std_msg_t  FlightMsg;
 
-
+bool_t wp_home_or_takeoff = FALSE;
 bool_t wp_download_finished = FALSE;
 uint8_t wp_packet_idx = 0;      ///<航点数据包索引
 float flight_plan_offset = 0;   ///<线间距
@@ -800,6 +800,7 @@ void handle_transparent_transmission(u8 *buf)
             //DJI_Sample_Funny_Ctrl(DRAW_SQUARE_SAMPLE);
             //OSSemPost(&SemDjiFlightCtrlObtain,OS_OPT_POST_1,&err);
             if(wp_download_finished == TRUE) {
+				wp_home_or_takeoff = TRUE;
 				OSQPost((OS_Q*		)&QAutoNav, 	
 						(void*		)&msg,
 						(OS_MSG_SIZE)1,
@@ -810,8 +811,17 @@ void handle_transparent_transmission(u8 *buf)
         }
         else if(buf[1] == 0x01)//停止航线飞行
         {
-        	//printf("\r\nstopppppppppp!\r\n",index,lat,lon);
-			//OSSemPost(&SemDjiFlightCtrlRelease,OS_OPT_POST_1,&err);
+        	if(wp_home_or_takeoff != FALSE) {
+				wp_home_or_takeoff = FALSE;
+				printf("\r\nstopppppppppp!\r\n");
+        		msg = MSG_TYPE_NAV_HOME_OR_TAKE_OFF;
+				OSQPost((OS_Q*		)&QAutoNav, 	
+						(void*		)&msg,
+						(OS_MSG_SIZE)1,
+						(OS_OPT 	)OS_OPT_POST_FIFO,
+						(OS_ERR*	)&err);
+			}
+        	
         }
         else if(buf[1] == 0x02)//获取设备信息
         {

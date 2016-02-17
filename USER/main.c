@@ -474,6 +474,11 @@ void AppTaskAutoNav(void *p_arg)
 					status = AUTO_NAV_STATUS_CHECK_GPS;
 					LOG_DJI_STR("\r\nNav start!\r\n");
 					break;
+				case MSG_TYPE_NAV_HOME_OR_TAKE_OFF:
+					status = AUTO_NAV_STATUS_IDLE;
+					LOG_DJI_STR("\r\nHome or take off,release ctrl!\r\n");
+					OSSemPost(&SemDjiFlightCtrlRelease,OS_OPT_POST_1,&err);
+					break;
 				case MSG_TYPE_NAV_DONE:
 					status = AUTO_NAV_STATUS_IDLE;
 					LOG_DJI_STR("\r\ntarget complete,release ctrl!\r\n");

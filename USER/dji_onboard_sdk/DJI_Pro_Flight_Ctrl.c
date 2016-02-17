@@ -37,6 +37,7 @@ float d_alt_p_gain = 10;///<高度偏差累加 增益P
 int block = 0;
 
 float task_altitude = 0;        ///<航线高度
+float target_altitude = 0;
 float task_speed = 0;           ///<航线速度
 
 sdk_std_msg_t std_broadcast_data;
@@ -94,7 +95,18 @@ void ctrl_attitude_alt(float pitch, float roll, float yaw, float altitude)
     user_ctrl_data.thr_z = target_alt;
     user_ctrl_data.yaw = yaw;
     DJI_Pro_Attitude_Control(&user_ctrl_data);
-    //usleep(20000);
+}
+
+void ctrl_enu_speed(float speed_e, float speed_n, float yaw, float speed_u)
+{
+    attitude_data_t user_ctrl_data;
+	
+    user_ctrl_data.ctrl_flag = 0x40;
+    user_ctrl_data.roll_or_x = speed_n;
+    user_ctrl_data.pitch_or_y = speed_e;
+    user_ctrl_data.thr_z = speed_u;
+    user_ctrl_data.yaw = yaw;
+    DJI_Pro_Attitude_Control(&user_ctrl_data);
 }
 
 u8 auto_nav_check_gps(void)
@@ -124,6 +136,7 @@ u8 auto_nav_check_height(void)
 {
 	api_pos_data_t pos;
     pos = GetPosInfo();
+    target_altitude = task_altitude;
     //若高度不足2m，先上升到航线任务高度
     if (pos.height < 2) {
     	return 1;
@@ -132,17 +145,55 @@ u8 auto_nav_check_height(void)
     }
 }
 
+
+float kp = 0.5;
+float kd = 0.0;
+float last_vert_pos_error = 0;
+float vert_speed_max = 1;
+float vert_speed_min = -1;
+
+float run_alitutde_pid(float alt_current, float alt_setpoint)
+{
+    float vert_speed_setpoint = 0;
+    float vert_pos_error = alt_setpoint - alt_current;
+    float d_vert_pos_error = vert_pos_error - last_vert_pos_error;
+    vert_speed_setpoint = kp * vert_pos_error + kd * d_vert_pos_error;
+    last_vert_pos_error = d_vert_pos_error;
+    
+    if (vert_speed_setpoint > vert_speed_max) {
+        vert_speed_setpoint = vert_speed_max;
+    }
+    
+    if (vert_speed_setpoint < vert_speed_min) {
+        vert_speed_setpoint = vert_speed_min;
+    }
+    
+    return vert_speed_setpoint;
+}
+void ctrl_attitude_alt_by_speed(float speed_e, float speed_n, float yaw, float altitude)
+{
+    float verts_speed_setpoint = run_alitutde_pid(GetPosInfo().height,altitude); 
+    ctrl_enu_speed(speed_e, speed_n, yaw*180/M_PI,verts_speed_setpoint);   
+}
+
 u8 auto_nav_raise_to_tartget_height(void)
 {
-	api_pos_data_t pos;
-    pos = GetPosInfo();
-    ctrl_attitude_alt(0, 0, 0, task_altitude);
-	if(fabsf(task_altitude - pos.height) < 0.2f){
-	//printf("pos.height break\n";
- 		return 1;
-	} else {
-		return 0;
+	float height;
+	float speed;
+	u8 result = 0;
+    height = GetPosInfo().height;
+    speed = GetVelInfo().z;
+    //ctrl_attitude_alt(0, 0, 0, task_altitude);
+    ctrl_attitude_alt_by_speed(0, 0, 0, task_altitude);
+    printf("height=%f,v=%f\r\n",height,speed);
+	if((task_altitude - height) < 0.1f) {
+		result = 1;
+	} else if(fabsf(task_altitude - height) < 0.5f){
+		if( speed < 0.03 ) {
+			result = 1;
+		}
 	}  
+	return result;
 }
 
 u8 auto_nav(void)
@@ -156,11 +207,12 @@ u8 auto_nav(void)
 	float yaw;
 	float speed_n;
 	float speed_e;
+	float speed_u;
 	float speed_temp;
 	u8 rlt=0;
 	//u8 msg;
 	//OS_ERR err;
-	
+	int throttle;
 	//设置ENU速度
 
 	vel = GetVelInfo();
@@ -227,7 +279,23 @@ u8 auto_nav(void)
 	    speed_n = cosf(h_ctl_course_setpoint)*speed;
 	    speed_e = sinf(h_ctl_course_setpoint)*speed;
 	    //发送控制指令
-	    ctrl_attitude_alt(speed_e, speed_n, yaw*180/M_PI, task_altitude);
+	    //ctrl_attitude_alt(speed_e, speed_n, yaw*180/M_PI, task_altitude);
+	    
+	    //获取遥控器油门-10000 ~ 10000
+        throttle = GetRcThrottleInfo();
+        
+        //printf("ctrl_attitude_alt() alt:%f\n",target_altitude);
+        
+        //发送控制指令
+        if (fabsf(throttle) < 10) {
+            //ctrl_attitude_alt(speed_e, speed_n, yaw*180/M_PI, target_altitude); 
+            speed_u = run_alitutde_pid(pos.height,target_altitude);        
+        } else {
+            speed_u = 2*(throttle/10000.0); 
+            //记录干预垂直速度后的高度
+            target_altitude = pos.height;
+        }
+        ctrl_enu_speed(speed_e, speed_n, yaw*180/M_PI,speed_u);   
 	} else {
 	    //释放控制权
 	    #if 0
