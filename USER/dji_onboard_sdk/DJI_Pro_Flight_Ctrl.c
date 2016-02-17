@@ -137,6 +137,7 @@ u8 auto_nav_raise_to_tartget_height(void)
 	api_pos_data_t pos;
     pos = GetPosInfo();
     ctrl_attitude_alt(0, 0, 0, task_altitude);
+	printf("task_altitude=%f pos.height=%f\n",task_altitude,pos.height);
 	if(fabsf(task_altitude - pos.height) < 0.2f){
 	//printf("pos.height break\n";
  		return 1;
