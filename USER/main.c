@@ -503,6 +503,7 @@ void AppTaskAutoNav(void *p_arg)
 				break;
 			case AUTO_NAV_STATUS_CHECK_HEIGHT:
 				if(auto_nav_check_height()) {
+					LOG_DJI_STR("\r\nheight < 2m,raising up\r\n");
 					status = AUTO_NAV_STATUS_RAISE_TARTGET_HEIGHT;
 				} else {
 					status = AUTO_NAV_STATUS_RUN;
@@ -515,6 +516,8 @@ void AppTaskAutoNav(void *p_arg)
 					status = AUTO_NAV_STATUS_RUN;
 					LOG_DJI_STR("\r\nflight raise to tartget height\r\n");
 					LOG_DJI_STR("\r\nstart target waypoint!\r\n");
+				} else {
+					LOG_DJI_STR("+");
 				}
 				break;
 			case AUTO_NAV_STATUS_RUN:
