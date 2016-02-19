@@ -185,11 +185,11 @@ u8 auto_nav_raise_to_tartget_height(void)
     speed = GetVelInfo().z;
     //ctrl_attitude_alt(0, 0, 0, task_altitude);
     ctrl_attitude_alt_by_speed(0, 0, 0, task_altitude);
-    printf("height=%f,v=%f\r\n",height,speed);
+    //printf("height=%f,v=%f\r\n",height,speed);
 	if((task_altitude - height) < 0.1f) {
 		result = 1;
 	} else if(fabsf(task_altitude - height) < 0.5f){
-		if( speed < 0.03 ) {
+		if( speed < 0.03f ) {
 			result = 1;
 		}
 	}  
