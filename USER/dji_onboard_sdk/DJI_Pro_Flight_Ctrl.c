@@ -54,6 +54,12 @@ int GetRcThrottleInfo(void)
 {
     return std_broadcast_data.rc.throttle;
 }
+
+int GetRcPitchInfo(void)
+{
+    return std_broadcast_data.rc.pitch;
+}
+
 int16_t GetRcGearInfo(void)
 {
     return std_broadcast_data.rc.gear;
@@ -209,6 +215,9 @@ u8 auto_nav(void)
 	float speed_e;
 	float speed_u;
 	float speed_temp;
+    bool_t flight_back = FALSE;
+    float next_line_bearing = 0;
+    float yaw_kp = 1;
 	u8 rlt=0;
 	//u8 msg;
 	//OS_ERR err;
@@ -238,7 +247,8 @@ u8 auto_nav(void)
 	        }
 	    	break;
 	    case 1:
-	    	ap_nav_route_line(ap_get_position_enu(),&ap_enu_waypoints[target_wp-1],&ap_enu_waypoints[target_wp]);
+            ap_nav_route_line(ap_get_position_enu(),&ap_enu_waypoints[target_wp-1],&ap_enu_waypoints[target_wp]);
+        
 	        if(ap_nav_is_approaching_waypoint(core_state.target_waypoint,1)) {
 	            core_state.target_waypoint++;
 	        }
@@ -246,14 +256,32 @@ u8 auto_nav(void)
 	    default:
 	        break;
 	}
-	speed = task_speed;
 
-	if(ap_get_dist_to_target_wp() < 8) {
+	speed = task_speed;
+    
+    if(GetRcPitchInfo() < -10) {      
+        speed += 1.5f*task_speed*GetRcPitchInfo()/10000.0f;      
+        if(speed < 0.0f) {
+            if (target_wp >= 1) {
+                speed = -speed;
+                flight_back = TRUE;
+                ap_nav_route_line(ap_get_position_enu(),&ap_enu_waypoints[target_wp],&ap_enu_waypoints[target_wp-1]);                    
+            } else {
+                speed = 0.0f;
+            }
+        }
+        if(speed > 4) {
+            speed = 4;
+        }
+    }
+
+    //判断与目标航点距离，提前减速
+	if(ap_get_dist_to_target_wp() < 10) {
 	    if(speed > 5) {
 			speed = 5;
 	    }
 	}
-	if(ap_get_dist_to_target_wp() < 6) {
+	if(ap_get_dist_to_target_wp() < 8) {
 	    if(speed > 3) {
 	        speed = 3;
 	    }
@@ -263,23 +291,89 @@ u8 auto_nav(void)
 	        speed = 2;
 	   	}
 	}
-	if(ap_lla_waypoints[target_wp].lat != 0) {
-	    yaw = h_ctl_course_setpoint;
-	    if(h_ctl_course_setpoint > M_PI) {
-	        yaw = h_ctl_course_setpoint - 2*M_PI;
+    
+    //判断与当前航点距离，限制加速
+    core_state.target_waypoint--;
+    if(ap_get_dist_to_target_wp() < 8) {
+	    if(speed > 5) {
+			speed = 5;
 	    }
-
+	}
+    if(ap_get_dist_to_target_wp() < 6) {
+	    if(speed > 4) {
+			speed = 4;
+	    }
+	}
+	if(ap_get_dist_to_target_wp() < 4) {
+	    if(speed > 3) {
+	        speed = 3;
+	    }
+	}
+	if(ap_get_dist_to_target_wp() < 2) {
+	    if(speed > 1) {
+	        speed = 1;
+	   	}
+	}
+    core_state.target_waypoint++;
+    
+    yaw_kp = 1;
+    
+    if(ap_get_dist_to_target_wp() < 3) {
+        yaw_kp = 0.4;
+    }
+    if(ap_get_dist_to_target_wp() < 2) {
+        yaw_kp = 0.2;
+    }
+    if(ap_get_dist_to_target_wp() < 1) {
+        yaw_kp = 1;
+    }
+    
+	if(ap_lla_waypoints[target_wp].lat != 0) {
+        
+        next_line_bearing = 0;
+        
+        if ((ap_get_dist_to_target_wp() < 3)&&(ap_lla_waypoints[target_wp + 1].lat != 0)) {
+            next_line_bearing = ap_get_bearing(ap_lla_waypoints[target_wp],ap_lla_waypoints[target_wp+1]);  
+            printf("h_ctl_course_setpoint:%f\r\nnext_line_bearing:%f\r\n",h_ctl_course_setpoint,next_line_bearing);
+        }
+        if (target_wp > 0) {
+            h_ctl_course_setpoint = yaw_kp * h_ctl_course_setpoint + (1 - yaw_kp) * next_line_bearing;
+            printf("h_ctl_course_setpoint result:%f\r\n\r\n",h_ctl_course_setpoint);
+        }
+        yaw = h_ctl_course_setpoint;
+        
+        /*
 	    if((ap_get_dist_to_target_wp() < 3)&& (ap_lla_waypoints[target_wp+1].lat != 0)) {
 	        yaw = ap_get_bearing(*ap_get_position_lla(),ap_lla_waypoints[target_wp+1]);
 	    }
-	    speed_temp = sqrt(enu_speed.x*enu_speed.x+enu_speed.y*enu_speed.y) + 1;
-		if( speed_temp < speed) {
-			speed = speed_temp ;
+        
+        next_line_bearing = 0;
+        if (ap_lla_waypoints[target_wp + 1].lat != 0) {
+            next_line_bearing = ap_get_bearing(ap_lla_waypoints[target_wp],ap_lla_waypoints[target_wp+1]);  
+        }
+        */
+        
+	    speed_temp = sqrt(enu_speed.x*enu_speed.x+enu_speed.y*enu_speed.y) + 0.1;
+		if(speed_temp < speed) {
+			speed = speed_temp;
 		}
+        
+	    if(yaw > M_PI) {
+	        yaw = yaw - 2*M_PI;
+	    }
+    
+        if(flight_back) {
+            if (target_wp >= 1) {
+                if (yaw > 0) {
+                    yaw -= 3.141592653f;
+                } else {
+                    yaw += 3.141592653f;
+                }
+            }
+        }
+        
 	    speed_n = cosf(h_ctl_course_setpoint)*speed;
 	    speed_e = sinf(h_ctl_course_setpoint)*speed;
-	    //发送控制指令
-	    //ctrl_attitude_alt(speed_e, speed_n, yaw*180/M_PI, task_altitude);
 	    
 	    //获取遥控器油门-10000 ~ 10000
         throttle = GetRcThrottleInfo();

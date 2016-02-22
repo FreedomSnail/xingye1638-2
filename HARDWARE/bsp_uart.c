@@ -341,57 +341,7 @@ void UART4_Config(USART_TypeDef* USARTx,u32 baud)
 	  如下语句解决第1个字节无法正确发送出去的问题 */
   USART_ClearFlag(USARTx, USART_FLAG_TC);	  /* 清发送完成标志，Transmission Complete flag */	
 }
-/************************************************************************************************
-** Function name :		  
-** Description :
-** 
-** Input :
-** Output :
-** Return :
-** Others :
-** 
-************************************************************************************************/
-void UART5_Config(USART_TypeDef* USARTx,u32 baud)
-{
-   //GPIO端口设置
-    GPIO_InitTypeDef GPIO_InitStructure;
-	USART_InitTypeDef USART_InitStructure;
-	NVIC_InitTypeDef NVIC_InitStructure;
-	
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC|RCC_AHB1Periph_GPIOD,ENABLE); //使能GPIOC,D时钟
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_UART5,ENABLE);
- 
-	//串口5对应引脚复用映射
-	GPIO_PinAFConfig(GPIOC,GPIO_PinSource12,GPIO_AF_UART5); //GPIOC12复用为UART5_TX
-	GPIO_PinAFConfig(GPIOD,GPIO_PinSource2,GPIO_AF_UART5); //GPIOD2复用为UART5_RX
-	
-	//UART5端口配置
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12; 
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;//复用功能
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;	//速度50MHz
-	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP; //推挽复用输出
-	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP; //上拉
-	GPIO_Init(GPIOC,&GPIO_InitStructure); 
-	
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
-	GPIO_Init(GPIOD,&GPIO_InitStructure);
-
-   //UART5 初始化设置
-	USART_InitStructure.USART_BaudRate = baud;//波特率设置
-	USART_InitStructure.USART_WordLength = USART_WordLength_8b;//字长为8位数据格式
-	USART_InitStructure.USART_StopBits = USART_StopBits_1;//一个停止位
-	USART_InitStructure.USART_Parity = USART_Parity_No;//无奇偶校验位
-	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;//无硬件数据流控制
-	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;	//收发模式
-    USART_Init(USARTx, &USART_InitStructure); //初始化串口1
-
-	USART_ITConfig(USARTx, USART_IT_RXNE, ENABLE);					//使能接收中断
-	
-    USART_Cmd(USARTx, ENABLE);  //使能串口 
-	
-	USART_ClearFlag(USARTx, USART_FLAG_TC);
-		
-}  
+  
 /************************************************************************************************
 ** Function name :		  
 ** Description :
@@ -653,18 +603,12 @@ void NVIC_Configuration(void)
 	NVIC_Init(&NVIC_InitStructure);
 	#endif
 	#if 4	//如果需要开串口4中断
-	NVIC_InitStructure.NVIC_IRQChannel = UART4_IRQn;			     	//设置串口4中断
+	NVIC_InitStructure.NVIC_IRQChannel = UART4_IRQn;			     	//设置串口1中断
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 6;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
 	#endif
 
-	#if 5	//如果需要开串口5中断
-	NVIC_InitStructure.NVIC_IRQChannel = UART5_IRQn;			     	//设置串口5中断
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 7;
-	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_Init(&NVIC_InitStructure);
-	#endif
 	#if 0	//如果需要开串口6中断
 	NVIC_InitStructure.NVIC_IRQChannel = USART6_IRQn;			     	//设置串口1中断
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 6;

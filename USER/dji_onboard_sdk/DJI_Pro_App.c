@@ -50,8 +50,7 @@ float task_distance = 0;        ///<航线总距离
 
 pump_board_data_t pumpBoardInfo;
 
-u8 ks103ReadCnt;
-u16 ultraSonicHeight;
+
 
 u16 array_to_short(u8 *array)
 {
@@ -637,7 +636,7 @@ void send_device_info(uint64_t device_id, uint8_t is_usable)
 void send_flight_data(float latitude, float longitude, float altitude,
                       float height, float speed, uint8_t target_waypoint,
                       float yaw, float pump_current, uint8_t is_onboard_controlling,
-                      uint8_t is_pump_running, uint8_t is_dose_run_out,uint8_t pump_permission,uint64_t device_id,uint16_t ultral_sonic_wave_height)
+                      uint8_t is_pump_running, uint8_t is_dose_run_out,uint8_t pump_permission,uint64_t device_id)
 {
     uint8_t cmd[45];
     toFloat tt;
@@ -695,8 +694,8 @@ void send_flight_data(float latitude, float longitude, float altitude,
     cmd[33] = is_dose_run_out;
     cmd[34] = pump_permission;
     memcpy(cmd+35,(u8*)&device_id,8);
-	memcpy(cmd+43,(u8*)&ultral_sonic_wave_height,2);
-    send_data_to_mobile(cmd,45);
+	
+    send_data_to_mobile(cmd,43);
 }
 
 /**
@@ -859,49 +858,48 @@ void handle_transparent_transmission(u8 *buf)
             send_waypoint_request(wp_packet_idx++);
         }
         else if(buf[1] == 0x01)//地面站上传的数据包
-		{
-			if (wp_packet_idx == buf[2]) {
-			   wp_packet_idx++;
-			}
-			for( i = 0; i < 90; i+=9)
-			{
-			   index = buf[i+3];
-			   lat = array_to_float(&buf[i+4]);
-			   lon = array_to_float(&buf[i+8]);
+        {
+            if (wp_packet_idx == buf[2]) {
+                wp_packet_idx++;
+            }
+            for( i = 0; i < 90; i+=9)
+            {
+                index = buf[i+3];
+                lat = array_to_float(&buf[i+4]);
+                lon = array_to_float(&buf[i+8]);
 
-			   if(index == 0)
-			   {
-				   core_state.lla_origin.lat = (double)lat/180.0*M_PI;
-				   core_state.lla_origin.lon = (double)lon/180.0*M_PI;
-				   core_state.lla_origin.alt = task_altitude;
-			   }
+                if(index == 0)
+                {
+                    core_state.lla_origin.lat = (double)lat/180.0*M_PI;
+                    core_state.lla_origin.lon = (double)lon/180.0*M_PI;
+                    core_state.lla_origin.alt = task_altitude;
+                }
 
-			   ap_set_waypoint(index,(double)lat/180.0*M_PI,(double)lon/180.0*M_PI,task_altitude);
+                ap_set_waypoint(index,(double)lat/180.0*M_PI,(double)lon/180.0*M_PI,task_altitude);
 
-			   printf("\r\nwaypoint from mobile:%d,%f,%f\r\n",index,lat,lon);
-			   //printf("waypoint from mobile enu:%f,%f,%f\n",ap_get_waypoint(index).x,ap_get_waypoint(index).y,ap_get_waypoint(index).z);
+                printf("\r\nwaypoint from mobile:%d,%f,%f\r\n",index,lat,lon);
+                //printf("waypoint from mobile enu:%f,%f,%f\n",ap_get_waypoint(index).x,ap_get_waypoint(index).y,ap_get_waypoint(index).z);
 
-			   if(fabs(lat) <= 0.1)
-			   {
-				   wp_download_finished = TRUE;
-				   
-			   }
-			}
+                if(fabs(lat) <= 0.1)
+                {
+                    wp_download_finished = TRUE;
+                    
+                }
+            }
 
-			if((wp_packet_idx <= 9)&&(!wp_download_finished))
-			{
-			   send_waypoint_request(wp_packet_idx);
-			}
+            if((wp_packet_idx <= 9)&&(!wp_download_finished))
+            {
+                send_waypoint_request(wp_packet_idx);
+            }
 
-			if(wp_download_finished)
-			{
-			   end_waypoint_transfer();
-			   end_waypoint_transfer();
-			   end_waypoint_transfer();
-			   printf("\r\nupload done!\r\n");
-			}
-		}
-        
+            if(wp_download_finished)
+            {
+                end_waypoint_transfer();
+                end_waypoint_transfer();
+                end_waypoint_transfer();
+                printf("\r\nupload done!\r\n");
+            }
+        }
         else if(buf[1] == 0x02)//地面站请求获取航点数据包
         {
             index = buf[2];//数据包索引
