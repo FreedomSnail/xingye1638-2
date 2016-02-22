@@ -134,6 +134,7 @@ int main(void)
 	USART2_Config(USART2,115200);
 	USART3_Config(USART3,115200);
 	UART4_Config(UART4,115200);
+	UART5_Config(UART5,9600);
 	//NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);//中断分组配置
 	NVIC_Configuration();
 	INTX_ENABLE();		//开中断
@@ -334,7 +335,17 @@ void AppTaskDjiActivation(void *p_arg)
 		}
 	}
 	while(1) {
-		OSTimeDlyHMSM(0, 0, 1, 0, OS_OPT_TIME_HMSM_STRICT,&err);
+		USART_SendData(UART5,0xe8);
+		while(USART_GetFlagStatus(UART5, USART_FLAG_TC)==RESET);
+		OSTimeDlyHMSM(0, 0, 0, 1, OS_OPT_TIME_HMSM_STRICT,&err);
+		USART_SendData(UART5,0x02);
+		while(USART_GetFlagStatus(UART5, USART_FLAG_TC)==RESET);
+		OSTimeDlyHMSM(0, 0, 0, 1, OS_OPT_TIME_HMSM_STRICT,&err);
+		USART_SendData(UART5,0xbc);
+		while(USART_GetFlagStatus(UART5, USART_FLAG_TC)==RESET);
+		ks103ReadCnt =1;
+		OSTimeDlyHMSM(0, 0, 0, 200, OS_OPT_TIME_HMSM_STRICT,&err);
+		LOG_DJI_VALUE("\r\nultraSonic = %d\r\n",ultraSonicHeight);
 		send_flight_data(	(float)std_broadcast_data.pos.lati,
 							(float)std_broadcast_data.pos.longti,
 							(float)std_broadcast_data.pos.alti, 
@@ -347,7 +358,8 @@ void AppTaskDjiActivation(void *p_arg)
 							pumpBoardInfo.is_pump_running,	//水泵运行状态
 							pumpBoardInfo.is_dose_run_out,	//农药剩余量信息
 							pumpBoardInfo.is_usable,		//授权信息,水泵是否可以使用
-							pumpBoardInfo.device_id);		//机身编号
+							pumpBoardInfo.device_id,		//机身编号
+							ultraSonicHeight);				//超声波测高度值
 		#if 1
 		//LOG_DJI_VALUE("\r\nss=%lld\r\n",1509200000097);
 		if((std_broadcast_data.ctrl_info.cur_ctrl_dev_in_navi_mode == 1)) {//app control

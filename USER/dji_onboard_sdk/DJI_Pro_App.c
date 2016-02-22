@@ -50,7 +50,8 @@ float task_distance = 0;        ///<航线总距离
 
 pump_board_data_t pumpBoardInfo;
 
-
+u8 ks103ReadCnt;
+u16 ultraSonicHeight;
 
 u16 array_to_short(u8 *array)
 {
@@ -616,7 +617,6 @@ void send_device_info(uint64_t device_id, uint8_t is_usable)
 
     send_data_to_mobile(cmd,7);
 }
-
 /**
  * @brief 发送飞行数据到移动端 0x08 0x01
  * @param latitude 纬度 deg
@@ -632,11 +632,12 @@ void send_device_info(uint64_t device_id, uint8_t is_usable)
  * @param uint8_t is_dose_run_out 是否药尽
  * @param uint8_t pump_permission 水泵权限控制
  * @param uint64_t device_id 水泵板保存的机身编号
+ * @param ultral_sonic_wave_height	超声波测得的高度
  */
 void send_flight_data(float latitude, float longitude, float altitude,
                       float height, float speed, uint8_t target_waypoint,
                       float yaw, float pump_current, uint8_t is_onboard_controlling,
-                      uint8_t is_pump_running, uint8_t is_dose_run_out,uint8_t pump_permission,uint64_t device_id)
+                      uint8_t is_pump_running, uint8_t is_dose_run_out,uint8_t pump_permission,uint64_t device_id,uint16_t ultral_sonic_wave_height)
 {
     uint8_t cmd[45];
     toFloat tt;
@@ -694,8 +695,8 @@ void send_flight_data(float latitude, float longitude, float altitude,
     cmd[33] = is_dose_run_out;
     cmd[34] = pump_permission;
     memcpy(cmd+35,(u8*)&device_id,8);
-	
-    send_data_to_mobile(cmd,43);
+	memcpy(cmd+43,(u8*)&ultral_sonic_wave_height,2);
+    send_data_to_mobile(cmd,45);
 }
 
 /**
