@@ -365,6 +365,41 @@ void UART4_IRQHandler(void)
 	#endif
 }
 
+/*******************************************************************************
+* Function Name  : USART2_IRQHandler
+* Description    : This function handles USART2 global interrupt request.
+* Input          : None
+* Output         : None
+* Return         : None
+超声波测距模块
+*******************************************************************************/
+void UART5_IRQHandler(void)
+{
+	OS_ERR err;
+	u8 Rev;
+	static u16 distance;
+	#if SYSTEM_SUPPORT_UCOS  //使用UCOS操作系统
+	OSIntEnter();    
+	#endif
+	//用户程序..
+	if(USART_GetITStatus(UART5, USART_IT_RXNE) != RESET) {	//判断读寄存器是否非空	
+    	// Read one byte from the receive data register
+    	Rev= USART_ReceiveData(UART5);   //将读寄存器的数据缓存到接收缓冲区里
+		//USART_SendData(UART5,Rev);while(USART_GetFlagStatus(UART5, USART_FLAG_TC)==RESET);
+		if(ks103ReadCnt == 1) {
+			ks103ReadCnt = 2;
+			distance = (u16)Rev*256;
+		} else if(ks103ReadCnt == 2) {
+			ks103ReadCnt = 3;
+			ultraSonicHeight = distance + Rev;
+		}
+  	}
+	//用户程序..
+	#if SYSTEM_SUPPORT_UCOS  
+	OSIntExit();    	//退出中断
+	#endif
+}
+
 /**
   * @brief  This function handles PPP interrupt request.
   * @param  None

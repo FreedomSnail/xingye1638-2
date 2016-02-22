@@ -58,6 +58,8 @@ void USART3_Config(USART_TypeDef* USARTx,u32 baud);
 
 void UART4_Config(USART_TypeDef* USARTx,u32 baud);
 
+void UART5_Config(USART_TypeDef* USARTx,u32 baud);
+
 
 void USART6_Config(USART_TypeDef* USARTx,u32 baud);
 

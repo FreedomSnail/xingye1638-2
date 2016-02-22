@@ -352,6 +352,9 @@ extern unsigned char Activation_Ack ;
 extern ProFrameData_Unit  DataFromDji;
 extern pump_board_data_t pumpBoardInfo;
 
+extern u8 ks103ReadCnt;
+extern u16 ultraSonicHeight;
+
 void DJI_Onboard_API_Activation_Init(void);
 
 void DJI_Onboard_API_Activation(void);
@@ -370,7 +373,7 @@ void Updata_Flight_Data(void);
 void send_flight_data(float latitude, float longitude, float altitude,
                       float height, float speed, uint8_t target_waypoint,
                       float yaw, float pump_current, uint8_t is_onboard_controlling,
-                      uint8_t is_pump_running, uint8_t is_dose_run_out,uint8_t pump_permission,uint64_t device_id);
+                      uint8_t is_pump_running, uint8_t is_dose_run_out,uint8_t pump_permission,uint64_t device_id,uint16_t ultral_sonic_wave_height);
 
 
 void handle_transparent_transmission(u8 *buf);
