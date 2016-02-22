@@ -1,8 +1,6 @@
 # MDK project files
 JLinkLog.txt
-*.Administrator
-*.uvoptx
-*.uvprojx
+
 *.lst
 *.map
 *.axf
