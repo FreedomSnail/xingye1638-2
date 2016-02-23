@@ -18,6 +18,7 @@ void ctrl_attitude_alt(float pitch, float roll, float yaw, float altitude);
 
 int16_t GetRcGearInfo(void);
 
+api_pos_data_t GetPosInfo(void);
 
 u8 auto_nav_check_gps(void);
 

@@ -389,7 +389,7 @@ void UART5_IRQHandler(void)
 			distance = (u16)Rev*256;
 		} else if(ks103ReadCnt == 2) {
 			ks103ReadCnt = 3;
-			ultraSonicHeight = distance + Rev;
+			ultraSonicHeightRawData = distance + Rev;
 		}
   	}
 	//”√ªß≥Ã–Ú..

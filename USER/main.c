@@ -116,7 +116,16 @@ CPU_STK	TASK_CONTROL_PUMP_BOARD_STK[TASK_CONTROL_PUMP_BOARD_STK_SIZE];
 void AppTaskControlPumpBoard(void *p_arg);
 
 
-
+/************************************************************************************************
+** Function name :		  
+** Description :
+** 
+** Input :
+** Output :
+** Return :
+** Others :
+** 
+************************************************************************************************/
 int main(void)
 {
 	OS_ERR err;
@@ -168,6 +177,16 @@ OS_SEM SemDjiFlightCtrlRelease;
 OS_SEM SemCtrlPump;
 
 OS_Q   QAutoNav;
+/************************************************************************************************
+** Function name :		  
+** Description :
+** 
+** Input :
+** Output :
+** Return :
+** Others :
+** 
+************************************************************************************************/
 void start_task(void *p_arg)
 {
 	OS_ERR err;
@@ -297,10 +316,16 @@ void start_task(void *p_arg)
 	OS_CRITICAL_EXIT();	//进入临界区
 	OSTaskDel((OS_TCB*)0,&err);	//删除start_task任务自身
 }
-
-//led0任务函数
-
-
+/************************************************************************************************
+** Function name :		  
+** Description :
+** 
+** Input :
+** Output :
+** Return :
+** Others :
+** 
+************************************************************************************************/
 void AppTaskDjiSDKCodec(void *p_arg)
 {
 	OS_ERR err;
@@ -315,8 +340,62 @@ void AppTaskDjiSDKCodec(void *p_arg)
 		}
 	}
 }
-
-//led1任务函数
+/************************************************************************************************
+** Function name :		  
+** Description :
+** 
+** Input :
+** Output :
+** Return :
+** Others :
+** 取10个样本进行平均值计算，采集10个样本的时间大约需要1s时间。
+这个10个样本里，数据大于11.0米的会被抛弃
+小于11米的数据要与气压传感器的高度数据比较，相对误差范围小于(0.6f+airHeight*0.2f)的数据
+被认为是超声波的有效值，记录下10个样本里的所有效值数据最后求平均值
+************************************************************************************************/
+void Ultra_Sonic_Wave_Software_Filter(u16 sampleHeight)
+{
+	static float sampleHeightSum = 0;
+	static float airHeightSum = 0;
+	static u8 sampleCnt = 0;
+	static u8 validDataCnt = 0;
+	float airHeight;
+	float airHeightAverage;
+	float sampleHeightAverage;
+	float sample;
+	airHeight = GetPosInfo().height;
+	sample = sampleHeight*0.01f;
+	airHeightSum += airHeight;
+	if(sampleCnt<10) {
+		sampleCnt++;
+		if( sample<11.0f ) {//超量程或者收不到回波信号
+			if(abs(sample-airHeight)<(0.6f+airHeight*0.2f)) {
+				sampleHeightSum += sample;
+				validDataCnt++;
+			}
+		}
+	} else {
+		sampleCnt = 0;
+		airHeightAverage = airHeightSum/10;
+		airHeightSum = 0;
+		if(validDataCnt > 0) {
+			sampleHeightAverage = sampleHeightSum/validDataCnt;
+			sampleHeightSum = 0;
+			validDataCnt = 0;
+			ultraSonicHeight = sampleHeightAverage;
+		}
+	}
+}
+/************************************************************************************************
+** Function name :		  
+** Description :
+** 
+** Input :
+** Output :
+** Return :
+** Others :
+** 
+************************************************************************************************/
 void AppTaskDjiActivation(void *p_arg)
 {
 	OS_ERR err;
@@ -335,16 +414,14 @@ void AppTaskDjiActivation(void *p_arg)
 		}
 	}
 	while(1) {
-		USART_SendData(UART5,0xe8);
-		while(USART_GetFlagStatus(UART5, USART_FLAG_TC)==RESET);
+		USART_Send_Char(UART5, 0xe8);
 		OSTimeDlyHMSM(0, 0, 0, 1, OS_OPT_TIME_HMSM_STRICT,&err);
-		USART_SendData(UART5,0x02);
-		while(USART_GetFlagStatus(UART5, USART_FLAG_TC)==RESET);
+		USART_Send_Char(UART5, 0x02);
 		OSTimeDlyHMSM(0, 0, 0, 1, OS_OPT_TIME_HMSM_STRICT,&err);
-		USART_SendData(UART5,0xbc);
-		while(USART_GetFlagStatus(UART5, USART_FLAG_TC)==RESET);
+		USART_Send_Char(UART5, 0xbc);
 		ks103ReadCnt =1;
-		OSTimeDlyHMSM(0, 0, 0, 200, OS_OPT_TIME_HMSM_STRICT,&err);
+		OSTimeDlyHMSM(0, 0, 0, 90, OS_OPT_TIME_HMSM_STRICT,&err);
+		Ultra_Sonic_Wave_Software_Filter(ultraSonicHeightRawData);
 		LOG_DJI_VALUE("\r\nultraSonic = %d\r\n",ultraSonicHeight);
 		send_flight_data(	(float)std_broadcast_data.pos.lati,
 							(float)std_broadcast_data.pos.longti,
@@ -386,7 +463,16 @@ void AppTaskDjiActivation(void *p_arg)
 		//LOG_DJI_STR("\r\nnormal\r\n");
 	}
 }
-
+/************************************************************************************************
+** Function name :		  
+** Description :
+** 
+** Input :
+** Output :
+** Return :
+** Others :
+** 
+************************************************************************************************/
 void AppTaskDjiObtainCtrl(void *p_arg)
 {
 	OS_ERR err;
@@ -419,6 +505,16 @@ void AppTaskDjiObtainCtrl(void *p_arg)
 		}
 	}
 }
+/************************************************************************************************
+** Function name :		  
+** Description :
+** 
+** Input :
+** Output :
+** Return :
+** Others :
+** 
+************************************************************************************************/
 void AppTaskDjiReleaseCtrl(void *p_arg)
 {
 	OS_ERR err;
@@ -441,7 +537,16 @@ void AppTaskDjiReleaseCtrl(void *p_arg)
 #define	AUTO_NAV_STATUS_CHECK_HEIGHT 2
 #define AUTO_NAV_STATUS_RAISE_TARTGET_HEIGHT 3
 #define	AUTO_NAV_STATUS_RUN 4
-
+/************************************************************************************************
+** Function name :		  
+** Description :
+** 
+** Input :
+** Output :
+** Return :
+** Others :
+** 
+************************************************************************************************/
 void AppTaskAutoNav(void *p_arg)
 {
 	OS_ERR err;

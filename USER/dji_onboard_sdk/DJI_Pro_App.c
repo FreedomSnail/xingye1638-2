@@ -51,8 +51,8 @@ float task_distance = 0;        ///<º½Ïß×Ü¾àÀë
 pump_board_data_t pumpBoardInfo;
 
 u8 ks103ReadCnt;
+u16 ultraSonicHeightRawData;
 u16 ultraSonicHeight;
-
 u16 array_to_short(u8 *array)
 {
     toShort cc;

@@ -353,6 +353,7 @@ extern ProFrameData_Unit  DataFromDji;
 extern pump_board_data_t pumpBoardInfo;
 
 extern u8 ks103ReadCnt;
+extern u16 ultraSonicHeightRawData;
 extern u16 ultraSonicHeight;
 
 void DJI_Onboard_API_Activation_Init(void);

@@ -60,11 +60,11 @@ void UART4_Config(USART_TypeDef* USARTx,u32 baud);
 
 void UART5_Config(USART_TypeDef* USARTx,u32 baud);
 
-
 void USART6_Config(USART_TypeDef* USARTx,u32 baud);
 
-
 void USART_OUT(USART_TypeDef* USARTx, uint8_t *Data,...);
+
+void USART_Send_Char(USART_TypeDef* USARTx, u8 buf);
 
 void USART_Send_Buf(USART_TypeDef* USARTx, u8* buf, u16 len);
 
