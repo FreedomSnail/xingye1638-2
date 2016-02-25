@@ -140,7 +140,7 @@ int main(void)
 	INTX_DISABLE();		//关中断,防止滴答定时器对外设初始化的打扰
 	LED_Init();         //LED初始化
 	//USART1_Config(USART1,115200);
-	USART2_Config(USART2,115200);
+	USART2_Config(USART2,57600);
 	USART3_Config(USART3,115200);
 	UART4_Config(UART4,115200);
 	UART5_Config(UART5,9600);
@@ -340,52 +340,7 @@ void AppTaskDjiSDKCodec(void *p_arg)
 		}
 	}
 }
-/************************************************************************************************
-** Function name :		  
-** Description :
-** 
-** Input :
-** Output :
-** Return :
-** Others :
-** 取10个样本进行平均值计算，采集10个样本的时间大约需要1s时间。
-这个10个样本里，数据大于11.0米的会被抛弃
-小于11米的数据要与气压传感器的高度数据比较，相对误差范围小于(0.6f+airHeight*0.2f)的数据
-被认为是超声波的有效值，记录下10个样本里的所有效值数据最后求平均值
-************************************************************************************************/
-void Ultra_Sonic_Wave_Software_Filter(u16 sampleHeight)
-{
-	static float sampleHeightSum = 0;
-	static float airHeightSum = 0;
-	static u8 sampleCnt = 0;
-	static u8 validDataCnt = 0;
-	float airHeight;
-	float airHeightAverage;
-	float sampleHeightAverage;
-	float sample;
-	airHeight = GetPosInfo().height;
-	sample = sampleHeight*0.01f;
-	airHeightSum += airHeight;
-	if(sampleCnt<10) {
-		sampleCnt++;
-		if( sample<11.0f ) {//超量程或者收不到回波信号
-			if(abs(sample-airHeight)<(0.6f+airHeight*0.2f)) {
-				sampleHeightSum += sample;
-				validDataCnt++;
-			}
-		}
-	} else {
-		sampleCnt = 0;
-		airHeightAverage = airHeightSum/10;
-		airHeightSum = 0;
-		if(validDataCnt > 0) {
-			sampleHeightAverage = sampleHeightSum/validDataCnt;
-			sampleHeightSum = 0;
-			validDataCnt = 0;
-			ultraSonicHeight = sampleHeightAverage;
-		}
-	}
-}
+
 /************************************************************************************************
 ** Function name :		  
 ** Description :
@@ -674,7 +629,8 @@ CMD VALUE由[水泵开关状态8bit]+[水泵电压32bit]组成
 帧长度 13字节
 
 命令集 0x02 命令码 0x02 透传数据（水泵控制板至飞控板）
-CMD VALUE由[水泵开关状态8bit]+[水泵电压32bit]+[供电电压32bit]+[农药量状态8bit]+[机身编码64bit]+[授权状态8bit]组成
+CMD VALUE由[水泵开关状态8bit]+[水泵电压32bit]+[供电电压32bit]+[农药量状态8bit]
++[机身编码64bit]+[授权状态8bit]组成
 帧长度 27字节
 
 *******************************************************************************/

@@ -152,7 +152,7 @@ u8 auto_nav_check_height(void)
 }
 
 
-float kp = 0.5;
+float kp = 1.5;
 float kd = 0.0;
 float last_vert_pos_error = 0;
 float vert_speed_max = 1;
@@ -176,9 +176,71 @@ float run_alitutde_pid(float alt_current, float alt_setpoint)
     
     return vert_speed_setpoint;
 }
+
+/************************************************************************************************
+** Function name :		  
+** Description :
+** 
+** Input :
+** Output :
+** Return :
+** Others :
+** 取10个样本进行平均值计算，采集10个样本的时间大约需要1s时间。
+这个10个样本里，数据大于11.0米的会被抛弃
+小于11米的数据要与气压传感器的高度数据比较，相对误差范围小于(0.6f+airHeight*0.2f)的数据
+被认为是超声波的有效值，记录下10个样本里的所有效值数据最后求平均值
+************************************************************************************************/
+void Ultra_Sonic_Wave_Software_Filter(u16 sampleHeight)
+{
+	static float sampleHeightSum = 0;
+	static float airHeightSum = 0;
+	static u8 sampleCnt = 0;
+	static u8 validDataCnt = 0;
+    //static float last_sample_height = 0;
+	float airHeight;
+	float airHeightAverage;
+	float sampleHeightAverage;
+	float sample;
+	airHeightAverage = airHeightAverage;//防止编译警告
+	airHeight = GetPosInfo().height;
+	sample = sampleHeight*0.001f;
+	airHeightSum += airHeight;
+	if(sampleCnt<10) {
+		sampleCnt++;
+        if((sample<8.0f) && (sample>0.4f)) {//超量程或者收不到回波信号
+            sampleHeightSum += sample;
+            validDataCnt++;  
+        }
+	} else {
+		sampleCnt = 0;
+		airHeightAverage = airHeightSum/10;
+		airHeightSum = 0;
+		if(validDataCnt > 0) {
+			sampleHeightAverage = sampleHeightSum/validDataCnt;
+			sampleHeightSum = 0;
+			validDataCnt = 0;
+			ultraSonicHeight = sampleHeightAverage*1000;
+		}
+	}
+}
+
+u8 is_use_ultra_sonic = 1;
+
 void ctrl_attitude_alt_by_speed(float speed_e, float speed_n, float yaw, float altitude)
 {
-    float verts_speed_setpoint = run_alitutde_pid(GetPosInfo().height,altitude); 
+    float verts_speed_setpoint;
+    
+    if (is_use_ultra_sonic) {
+        if ((ultraSonicHeight > 8)||(ultraSonicHeight < 0.4)) {
+            verts_speed_setpoint = run_alitutde_pid(GetPosInfo().height,altitude); 
+        } else {
+            verts_speed_setpoint = run_alitutde_pid(ultraSonicHeight,altitude); 
+        } 
+    } else {
+        verts_speed_setpoint = run_alitutde_pid(GetPosInfo().height,altitude); 
+    }
+    
+    
     ctrl_enu_speed(speed_e, speed_n, yaw*180/M_PI,verts_speed_setpoint);   
 }
 
@@ -216,13 +278,14 @@ u8 auto_nav(void)
 	float speed_u;
 	float speed_temp;
     bool_t flight_back = FALSE;
-    float next_line_bearing = 0;
+    //float next_line_bearing = 0;
     float yaw_kp = 1;
 	u8 rlt=0;
 	//u8 msg;
 	//OS_ERR err;
 	int throttle;
 	//设置ENU速度
+	yaw_kp = yaw_kp;//防止编译警告
 
 	vel = GetVelInfo();
 	enu_speed.x = vel.y;
@@ -293,6 +356,7 @@ u8 auto_nav(void)
 	}
     
     //判断与当前航点距离，限制加速
+    /*
     core_state.target_waypoint--;
     if(ap_get_dist_to_target_wp() < 8) {
 	    if(speed > 5) {
@@ -315,6 +379,7 @@ u8 auto_nav(void)
 	   	}
 	}
     core_state.target_waypoint++;
+    */
     
     yaw_kp = 1;
     
@@ -330,6 +395,7 @@ u8 auto_nav(void)
     
 	if(ap_lla_waypoints[target_wp].lat != 0) {
         
+        /*
         next_line_bearing = 0;
         
         if ((ap_get_dist_to_target_wp() < 3)&&(ap_lla_waypoints[target_wp + 1].lat != 0)) {
@@ -340,13 +406,14 @@ u8 auto_nav(void)
             h_ctl_course_setpoint = yaw_kp * h_ctl_course_setpoint + (1 - yaw_kp) * next_line_bearing;
             printf("h_ctl_course_setpoint result:%f\r\n\r\n",h_ctl_course_setpoint);
         }
+        */
         yaw = h_ctl_course_setpoint;
-        
-        /*
+             
 	    if((ap_get_dist_to_target_wp() < 3)&& (ap_lla_waypoints[target_wp+1].lat != 0)) {
 	        yaw = ap_get_bearing(*ap_get_position_lla(),ap_lla_waypoints[target_wp+1]);
 	    }
         
+        /*
         next_line_bearing = 0;
         if (ap_lla_waypoints[target_wp + 1].lat != 0) {
             next_line_bearing = ap_get_bearing(ap_lla_waypoints[target_wp],ap_lla_waypoints[target_wp+1]);  

@@ -20,6 +20,8 @@ int16_t GetRcGearInfo(void);
 
 api_pos_data_t GetPosInfo(void);
 
+void Ultra_Sonic_Wave_Software_Filter(u16 sampleHeight);
+
 u8 auto_nav_check_gps(void);
 
 void auto_nav_math_init(void);
